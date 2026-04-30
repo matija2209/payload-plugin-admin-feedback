@@ -25,7 +25,6 @@ type FeedbackWidgetProps = {
   allowScreenshotUpload?: boolean;
   screenshotMaxFileSizeBytes?: number;
   screenshotAllowedMimeTypes?: string[];
-  headerImageUrl?: string;
   onSubmit: (payload: SubmitPayload) => Promise<SubmitResult>;
   onUpload?: (formData: FormData) => Promise<UploadResult>;
 };
@@ -111,7 +110,6 @@ export function FeedbackWidget({
   allowScreenshotUpload = true,
   screenshotMaxFileSizeBytes = 5 * 1024 * 1024,
   screenshotAllowedMimeTypes = ['image/png', 'image/jpeg', 'image/webp'],
-  headerImageUrl,
   onSubmit,
   onUpload,
 }: FeedbackWidgetProps) {
@@ -508,15 +506,6 @@ export function FeedbackWidget({
             boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
           }}
         >
-          {headerImageUrl ? (
-            <div style={{ marginBottom: '12px', borderRadius: '8px', overflow: 'hidden' }}>
-              <img
-                src={headerImageUrl}
-                alt="Header"
-                style={{ width: '100%', height: 'auto', display: 'block' }}
-              />
-            </div>
-          ) : null}
           <h3 style={{ margin: '0 0 8px', fontSize: '16px' }}>{title}</h3>
           <p style={{ margin: '0 0 8px', fontSize: '12px', opacity: 0.8 }}>{currentPath}</p>
           <textarea

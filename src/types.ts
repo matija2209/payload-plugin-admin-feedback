@@ -20,7 +20,6 @@ export type AdminFeedbackPluginOptions = {
   mediaCollectionSlug?: string;
   strictMediaCollection?: boolean;
   screenshot?: ScreenshotConfig;
-  headerImageUrl?: string;
   frontend?: FrontendDisplayConfig;
   frontendRouteMatcher?: (pathname: string) => boolean;
 };
@@ -31,7 +30,6 @@ export type ResolvedAdminFeedbackPluginOptions = Omit<
 > & {
   frontend: Required<FrontendDisplayConfig>;
   screenshot: Required<ScreenshotConfig>;
-  headerImageUrl?: string;
   mediaCollectionSlug: string;
   strictMediaCollection: boolean;
 };

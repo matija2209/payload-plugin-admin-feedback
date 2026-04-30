@@ -66,6 +66,7 @@ const resolveOptions = (
     allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp'],
     ...pluginOptions.screenshot,
   },
+  headerImageUrl: pluginOptions.headerImageUrl,
 });
 
 export const adminFeedbackPlugin = definePlugin<AdminFeedbackPluginOptions>({

@@ -15,17 +15,18 @@ const trim = (value: unknown): string | null => {
 export const createAdminFeedbackCollection = (
   options: ResolvedAdminFeedbackPluginOptions,
   mediaCollectionSlug: string,
-): CollectionConfig => ({
-  slug: 'admin-feedback',
-  admin: {
-    group: {
-      sl: 'Sistem',
-      en: 'System',
-      ru: 'Система',
+): CollectionConfig => {
+  return {
+    slug: 'admin-feedback',
+    admin: {
+      group: {
+        sl: 'System',
+        en: 'System',
+        ru: 'System',
+      },
+      useAsTitle: 'message',
+      defaultColumns: ['createdAt', 'pagePath', 'status'],
     },
-    useAsTitle: 'message',
-    defaultColumns: ['createdAt', 'pagePath', 'status'],
-  },
   access: {
     read: ({ req }) => Boolean(req.user),
     create: ({ req }) => Boolean(req.user),
@@ -173,4 +174,5 @@ export const createAdminFeedbackCollection = (
       },
     },
   ],
-});
+  };
+};

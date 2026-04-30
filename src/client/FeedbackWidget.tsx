@@ -25,6 +25,7 @@ type FeedbackWidgetProps = {
   allowScreenshotUpload?: boolean;
   screenshotMaxFileSizeBytes?: number;
   screenshotAllowedMimeTypes?: string[];
+  headerImageUrl?: string;
   onSubmit: (payload: SubmitPayload) => Promise<SubmitResult>;
   onUpload?: (formData: FormData) => Promise<UploadResult>;
 };
@@ -104,12 +105,13 @@ const canvasToFile = async (canvas: HTMLCanvasElement): Promise<File> => {
 };
 
 export function FeedbackWidget({
-  title = 'Povratna informacija',
-  submitLabel = 'Poslji',
-  uploadLabel = 'Nalozi sliko',
+  title = 'Admin feedback',
+  submitLabel = 'Send',
+  uploadLabel = 'Upload image',
   allowScreenshotUpload = true,
   screenshotMaxFileSizeBytes = 5 * 1024 * 1024,
   screenshotAllowedMimeTypes = ['image/png', 'image/jpeg', 'image/webp'],
+  headerImageUrl,
   onSubmit,
   onUpload,
 }: FeedbackWidgetProps) {
@@ -130,6 +132,7 @@ export function FeedbackWidget({
   const annotationCanvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const drawingRef = React.useRef(false);
   const lastPointRef = React.useRef<AnnotationPoint | null>(null);
+
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -217,11 +220,13 @@ export function FeedbackWidget({
 
   const validateImageFile = (file: File): string | null => {
     if (!screenshotAllowedMimeTypes.includes(file.type)) {
-      return `Podprti tipi slik: ${screenshotAllowedMimeTypes.join(', ')}`;
+      const message = `Supported image types: ${screenshotAllowedMimeTypes.join(', ')}`;
+      return message;
     }
 
     if (file.size > screenshotMaxFileSizeBytes) {
-      return `Slika je prevelika. Najvecja velikost: ${Math.round(screenshotMaxFileSizeBytes / 1024 / 1024)}MB.`;
+      const message = `Image is too large. Maximum size: ${Math.round(screenshotMaxFileSizeBytes / 1024 / 1024)}MB.`;
+      return message;
     }
 
     return null;
@@ -261,7 +266,7 @@ export function FeedbackWidget({
       setAnnotating(true);
       setError(null);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Napaka pri obdelavi slike.');
+      setError(nextError instanceof Error ? nextError.message : 'Failed to process image.');
     }
   };
 
@@ -275,7 +280,7 @@ export function FeedbackWidget({
 
   const handleCaptureScreenshot = async (): Promise<void> => {
     if (!navigator.mediaDevices?.getDisplayMedia) {
-      setError('Brskalnik ne podpira zajema zaslona.');
+      setError('Browser does not support screen capture.');
       return;
     }
 
@@ -287,7 +292,7 @@ export function FeedbackWidget({
 
       const track = stream.getVideoTracks()[0];
       if (!track) {
-        setError('Zajem zaslona ni uspel.');
+        setError('Screen capture failed.');
         return;
       }
 
@@ -303,7 +308,7 @@ export function FeedbackWidget({
       canvas.height = height;
       const context = canvas.getContext('2d');
       if (!context) {
-        setError('Brskalnik ne podpira canvas konteksta.');
+        setError('Browser does not support canvas context.');
         stream.getTracks().forEach((item) => item.stop());
         return;
       }
@@ -315,7 +320,7 @@ export function FeedbackWidget({
       const captureFile = await canvasToFile(canvas);
       await handleStartAnnotation(captureFile);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Zajem zaslona ni uspel.');
+      setError(nextError instanceof Error ? nextError.message : 'Screen capture failed.');
     }
   };
 
@@ -348,7 +353,7 @@ export function FeedbackWidget({
     const canvas = annotationCanvasRef.current;
     const context = canvas.getContext('2d');
     if (!context) {
-      setError('Brskalnik ne podpira canvas konteksta.');
+      setError('Browser does not support canvas context.');
       return;
     }
 
@@ -429,13 +434,13 @@ export function FeedbackWidget({
       setAnnotating(false);
       setAnnotationImage(null);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Napaka pri izvozu slike.');
+      setError(nextError instanceof Error ? nextError.message : 'Failed to export image.');
     }
   };
 
   const handleSubmit = async (): Promise<void> => {
     if (!message.trim()) {
-      setError('Vnesite sporocilo.');
+      setError('Please enter a message.');
       return;
     }
 
@@ -503,13 +508,22 @@ export function FeedbackWidget({
             boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
           }}
         >
+          {headerImageUrl ? (
+            <div style={{ marginBottom: '12px', borderRadius: '8px', overflow: 'hidden' }}>
+              <img
+                src={headerImageUrl}
+                alt="Header"
+                style={{ width: '100%', height: 'auto', display: 'block' }}
+              />
+            </div>
+          ) : null}
           <h3 style={{ margin: '0 0 8px', fontSize: '16px' }}>{title}</h3>
           <p style={{ margin: '0 0 8px', fontSize: '12px', opacity: 0.8 }}>{currentPath}</p>
           <textarea
             value={message}
             onChange={(event) => setMessage(event.target.value)}
             rows={5}
-            placeholder="Opisite tezavo..."
+            placeholder="Describe the issue..."
             style={{
               width: '100%',
               borderRadius: '8px',
@@ -534,7 +548,7 @@ export function FeedbackWidget({
                   cursor: 'pointer',
                 }}
               >
-                Zajemi zaslon
+                Capture screen
               </button>
             ) : null}
             <button
@@ -549,7 +563,7 @@ export function FeedbackWidget({
                 cursor: 'pointer',
               }}
             >
-              {captureMode ? 'Klikni element...' : 'Zajemi element'}
+              {captureMode ? 'Click an element...' : 'Capture element'}
             </button>
             {allowScreenshotUpload && onUpload ? (
               <label
@@ -562,14 +576,14 @@ export function FeedbackWidget({
                   cursor: 'pointer',
                 }}
               >
-                {uploading ? 'Nalagam...' : uploadLabel}
+                {uploading ? 'Uploading...' : uploadLabel}
                 <input type="file" onChange={handleUpload} hidden />
               </label>
             ) : null}
           </div>
           {allowScreenshotUpload && onUpload ? (
             <p style={{ margin: '8px 0 0', fontSize: '11px', opacity: 0.8 }}>
-              Prilepite sliko iz odlozisca s Ctrl/Cmd+V.
+              Paste an image from clipboard with Ctrl/Cmd+V.
             </p>
           ) : null}
           {captureData ? (
@@ -596,7 +610,7 @@ export function FeedbackWidget({
                 cursor: 'pointer',
               }}
             >
-              Zapri
+              Close
             </button>
             <button
               type="button"
@@ -611,7 +625,7 @@ export function FeedbackWidget({
                 cursor: 'pointer',
               }}
             >
-              {submitting ? 'Posiljam...' : submitLabel}
+              {submitting ? 'Sending...' : submitLabel}
             </button>
           </div>
         </div>
@@ -638,13 +652,13 @@ export function FeedbackWidget({
               width: 'min(90vw, 760px)',
             }}
           >
-            <h3 style={{ margin: '0 0 8px', fontSize: '16px', color: '#f9fafb' }}>Oznaci sliko</h3>
+            <h3 style={{ margin: '0 0 8px', fontSize: '16px', color: '#f9fafb' }}>Annotate image</h3>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
               <input
                 type="color"
                 value={annotationColor}
                 onChange={(event) => setAnnotationColor(event.target.value)}
-                aria-label="Barva oznake"
+                aria-label="Annotation color"
               />
               <input
                 type="range"
@@ -652,7 +666,7 @@ export function FeedbackWidget({
                 max={12}
                 value={annotationSize}
                 onChange={(event) => setAnnotationSize(Number(event.target.value))}
-                aria-label="Debelina oznake"
+                aria-label="Annotation thickness"
               />
             </div>
             <div style={{ overflow: 'auto', maxHeight: '70vh' }}>
@@ -681,7 +695,7 @@ export function FeedbackWidget({
                   cursor: 'pointer',
                 }}
               >
-                Preklici
+                Cancel
               </button>
               <button
                 type="button"
@@ -695,7 +709,7 @@ export function FeedbackWidget({
                   cursor: 'pointer',
                 }}
               >
-                Uporabi sliko
+                Apply image
               </button>
             </div>
           </div>

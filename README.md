@@ -64,6 +64,7 @@ export default buildConfig({
 
 - `enabled?: boolean` default `true`
 - `emailTo: string | string[]` required
+- `headerImageUrl?: string` (optional image URL for widget header)
 - `fromLabel?: string`
 - `allowScreenshotUpload?: boolean` default `true`
 - `mediaCollectionSlug?: string` default `'media'`

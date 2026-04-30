@@ -9,6 +9,7 @@ export type ScreenshotConfig = {
   enabled?: boolean;
   maxFileSizeBytes?: number;
   allowedMimeTypes?: string[];
+  capturePolicy?: 'current-tab-first' | 'strict-current-tab' | 'any-surface';
 };
 
 export type AdminFeedbackPluginOptions = {

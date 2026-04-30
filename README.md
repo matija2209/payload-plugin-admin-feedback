@@ -70,7 +70,7 @@ export default buildConfig({
 - `allowScreenshotUpload?: boolean` default `true`
 - `mediaCollectionSlug?: string` default `'media'`
 - `strictMediaCollection?: boolean` default `true`
-- `screenshot?: { enabled?: boolean; maxFileSizeBytes?: number; allowedMimeTypes?: string[] }`
+- `screenshot?: { enabled?: boolean; maxFileSizeBytes?: number; allowedMimeTypes?: string[]; capturePolicy?: 'current-tab-first' | 'strict-current-tab' | 'any-surface' }`
 - `maxMessageLength?: number` default `3000`
 - `frontend?: { enabled?: boolean; include?: string[] }`
 - `frontendRouteMatcher?: (pathname: string) => boolean`

@@ -64,6 +64,7 @@ const resolveOptions = (
     enabled: true,
     maxFileSizeBytes: 5 * 1024 * 1024,
     allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp'],
+    capturePolicy: 'current-tab-first',
     ...pluginOptions.screenshot,
   },
 });

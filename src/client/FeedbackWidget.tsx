@@ -451,7 +451,6 @@ export function FeedbackWidget({
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [notice, setNotice] = React.useState<string | null>(null);
-  const [currentPath, setCurrentPath] = React.useState('/');
   const [annotating, setAnnotating] = React.useState(false);
   const [editorImage, setEditorImage] = React.useState<EditorImage | null>(null);
   const [editorHistory, setEditorHistory] = React.useState<EditorHistory>(DEFAULT_HISTORY);
@@ -468,39 +467,6 @@ export function FeedbackWidget({
   React.useEffect(() => {
     draftOperationRef.current = draftOperation;
   }, [draftOperation]);
-
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const updatePath = (): void => {
-      setCurrentPath(window.location.pathname);
-    };
-
-    updatePath();
-
-    const originalPushState = window.history.pushState;
-    const originalReplaceState = window.history.replaceState;
-
-    window.history.pushState = function (...args) {
-      originalPushState.apply(this, args);
-      updatePath();
-    };
-
-    window.history.replaceState = function (...args) {
-      originalReplaceState.apply(this, args);
-      updatePath();
-    };
-
-    window.addEventListener('popstate', updatePath);
-    window.addEventListener('hashchange', updatePath);
-
-    return () => {
-      window.history.pushState = originalPushState;
-      window.history.replaceState = originalReplaceState;
-      window.removeEventListener('popstate', updatePath);
-      window.removeEventListener('hashchange', updatePath);
-    };
-  }, []);
 
   React.useEffect(() => {
     if (!captureMode) {
@@ -989,7 +955,7 @@ export function FeedbackWidget({
     setError(null);
     const result = await onSubmit({
       message: message.trim(),
-      pagePath: currentPath,
+      pagePath: typeof window !== 'undefined' ? window.location.pathname : '/',
       selector: captureData?.selector,
       selectedText: captureData?.selectedText,
       screenshotId,
@@ -1056,7 +1022,9 @@ export function FeedbackWidget({
           }}
         >
           <h3 style={{ margin: '0 0 8px', fontSize: '16px' }}>{title}</h3>
-          <p style={{ margin: '0 0 8px', fontSize: '12px', opacity: 0.8 }}>{currentPath}</p>
+          <p style={{ margin: '0 0 8px', fontSize: '12px', opacity: 0.8 }}>
+            {typeof window !== 'undefined' ? window.location.pathname : '/'}
+          </p>
           <textarea
             value={message}
             onChange={(event) => setMessage(event.target.value)}

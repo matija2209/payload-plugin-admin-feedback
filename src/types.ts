@@ -1,4 +1,4 @@
-import type { PayloadRequest } from 'payload';
+import type { PayloadRequest, Config } from 'payload';
 
 export type FrontendDisplayConfig = {
   enabled?: boolean;
@@ -16,6 +16,9 @@ export type AdminFeedbackPluginOptions = {
   enabled?: boolean;
   emailTo: string | string[];
   fromLabel?: string;
+  fromName?: string;
+  fromAddress?: string;
+  email?: Config['email'];
   allowScreenshotUpload?: boolean;
   maxMessageLength?: number;
   mediaCollectionSlug?: string;
@@ -52,6 +55,7 @@ export type CreateFeedbackInput = {
 };
 
 export type FeedbackEmailData = {
+  id?: string | number;
   message: string;
   pagePath: string;
   selector?: string | null;

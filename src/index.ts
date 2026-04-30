@@ -83,6 +83,11 @@ export const adminFeedbackPlugin = definePlugin<AdminFeedbackPluginOptions>({
       throw new Error('adminFeedbackPlugin requires emailTo option.');
     }
 
+    // Hook into emailAdapter if provided
+    if (pluginOptions.email && !config.email) {
+      config.email = pluginOptions.email;
+    }
+
     const resolvedMediaCollectionSlug = resolveMediaCollectionSlug(config, options);
     const feedbackCollection = createAdminFeedbackCollection(options, resolvedMediaCollectionSlug);
 

@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload';
+import { headersWithCors } from 'payload';
 
 import { sendFeedbackEmail } from '../server/sendFeedbackEmail';
 import type { ResolvedAdminFeedbackPluginOptions } from '../types';
@@ -11,6 +12,12 @@ const trim = (value: unknown): string | null => {
   const nextValue = value.trim();
   return nextValue.length > 0 ? nextValue : null;
 };
+
+const corsHeaders = (req: Request, init?: HeadersInit): Headers =>
+  headersWithCors({
+    headers: new Headers(init),
+    req,
+  });
 
 export const createAdminFeedbackCollection = (
   options: ResolvedAdminFeedbackPluginOptions,
@@ -27,13 +34,152 @@ export const createAdminFeedbackCollection = (
       useAsTitle: 'message',
       defaultColumns: ['createdAt', 'pagePath', 'status'],
     },
-  access: {
-    read: ({ req }) => Boolean(req.user),
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => Boolean(req.user),
-  },
-  hooks: {
+    access: {
+      read: ({ req }) => Boolean(req.user),
+      create: () => true,
+      update: ({ req }) => Boolean(req.user),
+      delete: ({ req }) => Boolean(req.user),
+    },
+    endpoints: [
+      {
+        path: '/submit',
+        method: 'post',
+        handler: async (req) => {
+          try {
+            const body = await req.json();
+            const message = trim(body?.message);
+            if (!message) {
+              return Response.json(
+                { success: false, error: 'Message is required.' },
+                { status: 400, headers: corsHeaders(req) },
+              );
+            }
+
+            const doc = await req.payload.create({
+              collection: 'admin-feedback',
+              data: {
+                message,
+                pagePath: trim(body?.pagePath) || '/',
+                selector: trim(body?.selector) || undefined,
+                selectedText: trim(body?.selectedText) || undefined,
+                screenshot: body?.screenshotId || undefined,
+                createdBy: req.user?.id,
+                meta: {
+                  createdAt: new Date().toISOString(),
+                  userAgent: trim(body?.meta?.userAgent),
+                  locale: trim(body?.meta?.locale),
+                  viewport: trim(body?.meta?.viewport),
+                },
+              },
+            });
+
+            return Response.json(
+              { success: true, id: doc.id },
+              { headers: corsHeaders(req) },
+            );
+          } catch (error) {
+            return Response.json(
+              { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+              { status: 500, headers: corsHeaders(req) },
+            );
+          }
+        },
+      },
+      {
+        path: '/upload',
+        method: 'post',
+        handler: async (req) => {
+          try {
+            if (!req.user) {
+              return Response.json(
+                { success: false, error: 'Unauthorized' },
+                { status: 401, headers: corsHeaders(req) },
+              );
+            }
+
+            const formData = await req.formData();
+            const file = formData.get('file');
+            const altRaw = formData.get('alt');
+            const alt = typeof altRaw === 'string' ? altRaw.trim() : '';
+
+            if (!(file instanceof File)) {
+              return Response.json(
+                { success: false, error: 'Missing file.' },
+                { status: 400, headers: corsHeaders(req) },
+              );
+            }
+
+            if (file.size === 0) {
+              return Response.json(
+                { success: false, error: 'File is empty.' },
+                { status: 400, headers: corsHeaders(req) },
+              );
+            }
+
+            const media = await req.payload.create({
+              collection: mediaCollectionSlug,
+              data: {
+                alt: alt || file.name,
+              },
+              file: {
+                data: Buffer.from(await file.arrayBuffer()),
+                mimetype: file.type || 'application/octet-stream',
+                name: file.name,
+                size: file.size,
+              },
+            });
+
+            return Response.json(
+              { success: true, mediaId: Number(media.id) },
+              { headers: corsHeaders(req) },
+            );
+          } catch (error) {
+            return Response.json(
+              { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+              { status: 500, headers: corsHeaders(req) },
+            );
+          }
+        },
+      },
+      {
+        path: '/upload/:id',
+        method: 'delete',
+        handler: async (req) => {
+          try {
+            if (!req.user) {
+              return Response.json(
+                { success: false, error: 'Unauthorized' },
+                { status: 401, headers: corsHeaders(req) },
+              );
+            }
+
+            const id = req.routeParams?.id;
+            if (!id) {
+              return Response.json(
+                { success: false, error: 'Missing media ID.' },
+                { status: 400, headers: corsHeaders(req) },
+              );
+            }
+
+            await req.payload.delete({
+              collection: mediaCollectionSlug,
+              id,
+            });
+
+            return Response.json(
+              { success: true },
+              { headers: corsHeaders(req) },
+            );
+          } catch (error) {
+            return Response.json(
+              { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+              { status: 500, headers: corsHeaders(req) },
+            );
+          }
+        },
+      },
+    ],
+    hooks: {
     beforeChange: [
       ({ data, req, operation }) => {
         if (!data) {
@@ -92,6 +238,7 @@ export const createAdminFeedbackCollection = (
 
         try {
           await sendFeedbackEmail(req.payload, options, {
+            id: doc.id,
             message: String(doc.message || ''),
             pagePath: String(doc.pagePath || '/'),
             selector: typeof doc.selector === 'string' ? doc.selector : null,

@@ -1,17 +1,39 @@
 {
-  "name": "payload-plugin-admin-feedback",
+  "name": "@matija2209/payload-plugin-admin-feedback",
   "version": "1.0.0",
   "description": "Floating admin feedback widget plugin for Payload CMS.",
   "license": "MIT",
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "exports": {
-    ".": "./src/index.ts",
-    "./client": "./src/client/index.ts"
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./client": {
+      "import": "./dist/client/index.js",
+      "require": "./dist/client/index.cjs",
+      "types": "./dist/client/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts src/client/index.ts --format cjs,esm --dts --clean --minify --minify-whitespace",
+    "dev": "tsup src/index.ts src/client/index.ts --format cjs,esm --dts --watch",
+    "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
-    "payload": "^3.84.1",
-    "react": "^19.0.0"
+    "payload": "^3.0.0",
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "payload": "^3.0.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
   }
 }

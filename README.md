@@ -34,7 +34,9 @@ pnpm add payload-plugin-admin-feedback
 | -------------- | --------------- |
 | 1.x.x          | ^3.84.1         |
 
-## Usage
+## Setup
+
+### 1. Register the plugin in your Payload config
 
 ```ts
 import { buildConfig } from 'payload'
@@ -63,6 +65,63 @@ export default buildConfig({
   ],
 })
 ```
+
+This registers the `admin-feedback` collection with custom endpoints (`/submit`, `/upload`, `/upload/:id`) — no additional API routes are needed.
+
+### 2. Add the admin panel widget
+
+In your Payload admin layout (`src/app/(payload)/layout.tsx`):
+
+```tsx
+import { AdminFeedbackWidget } from 'payload-plugin-admin-feedback/client'
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <RootLayout config={config} importMap={importMap} serverFunction={serverFunction}>
+      {children}
+      <AdminFeedbackWidget />
+    </RootLayout>
+  )
+}
+```
+
+The admin widget automatically sends authenticated requests (HTTP-only cookies via `credentials: 'include'`).
+
+### 3. Add the frontend widget
+
+In your Next.js frontend locale layout (`src/app/(frontend)/[locale]/layout.tsx`):
+
+```tsx
+import { FrontendFeedbackWidget } from 'payload-plugin-admin-feedback/client'
+
+export default async function LocaleLayout({ children, params }) {
+  return (
+    <html>
+      <body>
+        {/* ... */}
+        <FrontendFeedbackWidget
+          include={['/marketplace*', '/profile*', '/checkout*']}
+          locales={['en', 'ru', 'sl']}
+        />
+        {children}
+        {/* ... */}
+      </body>
+    </html>
+  )
+}
+```
+
+**`FrontendFeedbackWidget` props:**
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `include` | `string[]` | required | Glob-style route patterns to show the widget on. Supports `*` wildcard suffixes (e.g. `'/profil*'` matches `/profile`, `/profile/orders/123`). |
+| `locales` | `string[]` | `[]` | Supported locale prefixes. The widget strips the locale segment before matching against `include` patterns. If all your routes are non-prefixed, leave empty. |
+| `title` | `string` | `'Feedback'` | Widget title. |
+| `submitLabel` | `string` | `'Send'` | Submit button label. |
+| `uploadLabel` | `string` | `'Upload image'` | Upload button label. |
+
+**How locale normalization works:** When `locales` is `['en', 'ru', 'sl']`, the widget strips the first path segment if it matches a locale. For example, `/en/marketplace` becomes `/marketplace` before checking the `include` patterns. This means you write patterns once and they work across all locales.
 
 ## Plugin Options
 

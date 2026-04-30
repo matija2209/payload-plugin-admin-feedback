@@ -19,6 +19,7 @@ type SubmitPayload = {
 
 type SubmitResult = { success: true } | { success: false; error: string };
 type UploadResult = { success: true; mediaId: number } | { success: false; error: string };
+type DeleteResult = { success: true } | { success: false; error: string };
 
 type FeedbackWidgetProps = {
   title?: string;
@@ -28,9 +29,9 @@ type FeedbackWidgetProps = {
   screenshotMaxFileSizeBytes?: number;
   screenshotAllowedMimeTypes?: string[];
   capturePolicy?: CapturePolicy;
-  headerImageUrl?: string;
   onSubmit: (payload: SubmitPayload) => Promise<SubmitResult>;
   onUpload?: (formData: FormData) => Promise<UploadResult>;
+  onDeleteScreenshot?: (mediaId: number) => Promise<DeleteResult>;
 };
 
 type CaptureData = {
@@ -435,16 +436,18 @@ export function FeedbackWidget({
   screenshotMaxFileSizeBytes = 5 * 1024 * 1024,
   screenshotAllowedMimeTypes = ['image/png', 'image/jpeg', 'image/webp'],
   capturePolicy = 'current-tab-first',
-  headerImageUrl,
   onSubmit,
   onUpload,
+  onDeleteScreenshot,
 }: FeedbackWidgetProps) {
   const [open, setOpen] = React.useState(false);
   const [message, setMessage] = React.useState('');
   const [captureMode, setCaptureMode] = React.useState(false);
   const [captureData, setCaptureData] = React.useState<CaptureData | null>(null);
   const [screenshotId, setScreenshotId] = React.useState<number | null>(null);
+  const [screenshotPreviewUrl, setScreenshotPreviewUrl] = React.useState<string | null>(null);
   const [uploading, setUploading] = React.useState(false);
+  const [deletingScreenshot, setDeletingScreenshot] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [notice, setNotice] = React.useState<string | null>(null);
@@ -551,28 +554,6 @@ export function FeedbackWidget({
   }, [captureMode]);
 
   React.useEffect(() => {
-    if (!open || !allowScreenshotUpload) {
-      return;
-    }
-
-    const onPaste = async (event: ClipboardEvent): Promise<void> => {
-      const file = Array.from(event.clipboardData?.items || [])
-        .find((item) => item.type.startsWith('image/'))
-        ?.getAsFile();
-
-      if (!file) {
-        return;
-      }
-
-      event.preventDefault();
-      await handleStartAnnotation(file);
-    };
-
-    window.addEventListener('paste', onPaste);
-    return () => window.removeEventListener('paste', onPaste);
-  }, [open, allowScreenshotUpload]);
-
-  React.useEffect(() => {
     if (!annotating) {
       return;
     }
@@ -628,9 +609,9 @@ export function FeedbackWidget({
   );
 
   const uploadImageFile = React.useCallback(
-    async (file: File): Promise<void> => {
+    async (file: File): Promise<boolean> => {
       if (!onUpload) {
-        return;
+        return false;
       }
 
       setError(null);
@@ -645,10 +626,11 @@ export function FeedbackWidget({
         if (result.success) {
           setScreenshotId(result.mediaId);
           setNotice('Annotated screenshot uploaded.');
-          return;
+          return true;
         }
 
         setError(result.error);
+        return false;
       } finally {
         setUploading(false);
       }
@@ -687,9 +669,39 @@ export function FeedbackWidget({
     [validateImageFile],
   );
 
+  React.useEffect(() => {
+    if (!open || !allowScreenshotUpload) {
+      return;
+    }
+
+    const onPaste = async (event: ClipboardEvent): Promise<void> => {
+      const file = Array.from(event.clipboardData?.items || [])
+        .find((item) => item.type.startsWith('image/'))
+        ?.getAsFile();
+
+      if (!file) {
+        return;
+      }
+
+      event.preventDefault();
+      await handleStartAnnotation(file);
+    };
+
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [allowScreenshotUpload, handleStartAnnotation, open]);
+
   const commitOperations = React.useCallback((nextOperations: AnnotationOperation[]): void => {
     setEditorHistory((current) => ({
       operations: nextOperations,
+      redoStack: [],
+      undoStack: [...current.undoStack, current.operations],
+    }));
+  }, []);
+
+  const appendOperation = React.useCallback((operation: AnnotationOperation): void => {
+    setEditorHistory((current) => ({
+      operations: [...current.operations, operation],
       redoStack: [],
       undoStack: [...current.undoStack, current.operations],
     }));
@@ -765,10 +777,22 @@ export function FeedbackWidget({
     commitOperations([]);
   };
 
-  const handleRevertToOriginal = (): void => {
-    setEditorHistory(DEFAULT_HISTORY);
+  const handleRevertLastAnnotation = (): void => {
     setDraftOperation(null);
     draftOperationRef.current = null;
+    pointerIdRef.current = null;
+
+    setEditorHistory((current) => {
+      if (current.operations.length === 0) {
+        return current;
+      }
+
+      return {
+        operations: current.operations.slice(0, -1),
+        redoStack: [],
+        undoStack: [...current.undoStack, current.operations],
+      };
+    });
   };
 
   const handleCanvasPointerDown = (event: React.PointerEvent<HTMLCanvasElement>): void => {
@@ -795,7 +819,7 @@ export function FeedbackWidget({
         point,
         text,
       };
-      commitOperations([...editorHistory.operations, operation]);
+      appendOperation(operation);
       return;
     }
 
@@ -882,7 +906,7 @@ export function FeedbackWidget({
         activeDraft.points.length === 1
           ? [...activeDraft.points, activeDraft.points[0]]
           : activeDraft.points;
-      commitOperations([...editorHistory.operations, { ...activeDraft, points }]);
+      appendOperation({ ...activeDraft, points });
       return;
     }
 
@@ -890,7 +914,7 @@ export function FeedbackWidget({
       return;
     }
 
-    commitOperations([...editorHistory.operations, activeDraft]);
+    appendOperation(activeDraft);
   };
 
   const handleCanvasPointerCancel = (event: React.PointerEvent<HTMLCanvasElement>): void => {
@@ -913,11 +937,45 @@ export function FeedbackWidget({
     }
 
     try {
+      const previewUrl = annotationCanvasRef.current.toDataURL('image/png');
       const file = await canvasToFile(annotationCanvasRef.current, editorImage.fileName);
-      await uploadImageFile(file);
-      closeAnnotationEditor();
+      const uploaded = await uploadImageFile(file);
+      if (uploaded) {
+        setScreenshotPreviewUrl(previewUrl);
+        closeAnnotationEditor();
+      }
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Failed to export image.');
+    }
+  };
+
+  const handleRemoveScreenshot = async (): Promise<void> => {
+    if (!screenshotId) {
+      setScreenshotPreviewUrl(null);
+      return;
+    }
+
+    if (!onDeleteScreenshot) {
+      setScreenshotId(null);
+      setScreenshotPreviewUrl(null);
+      return;
+    }
+
+    setDeletingScreenshot(true);
+    setError(null);
+
+    try {
+      const result = await onDeleteScreenshot(screenshotId);
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+
+      setScreenshotId(null);
+      setScreenshotPreviewUrl(null);
+      setNotice('Screenshot removed.');
+    } finally {
+      setDeletingScreenshot(false);
     }
   };
 
@@ -951,6 +1009,7 @@ export function FeedbackWidget({
     setMessage('');
     setCaptureData(null);
     setScreenshotId(null);
+    setScreenshotPreviewUrl(null);
     setNotice(null);
     setOpen(false);
   };
@@ -996,15 +1055,6 @@ export function FeedbackWidget({
             boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
           }}
         >
-          {headerImageUrl ? (
-            <div style={{ marginBottom: '12px', borderRadius: '8px', overflow: 'hidden' }}>
-              <img
-                src={headerImageUrl}
-                alt="Header"
-                style={{ width: '100%', height: 'auto', display: 'block' }}
-              />
-            </div>
-          ) : null}
           <h3 style={{ margin: '0 0 8px', fontSize: '16px' }}>{title}</h3>
           <p style={{ margin: '0 0 8px', fontSize: '12px', opacity: 0.8 }}>{currentPath}</p>
           <textarea
@@ -1085,9 +1135,53 @@ export function FeedbackWidget({
             </p>
           ) : null}
           {screenshotId ? (
-            <p style={{ margin: '4px 0 0', fontSize: '12px', opacity: 0.8 }}>
-              Media ID: {screenshotId}
-            </p>
+            <div
+              style={{
+                marginTop: '8px',
+                borderRadius: '10px',
+                border: '1px solid #374151',
+                background: '#0f172a',
+                padding: '8px',
+              }}
+            >
+              {screenshotPreviewUrl ? (
+                <div style={{ marginBottom: '8px', borderRadius: '8px', overflow: 'hidden' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={screenshotPreviewUrl}
+                    alt="Annotated screenshot preview"
+                    style={{ width: '100%', height: 'auto', display: 'block' }}
+                  />
+                </div>
+              ) : null}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <p style={{ margin: 0, fontSize: '12px', opacity: 0.8 }}>Media ID: {screenshotId}</p>
+                <button
+                  type="button"
+                  onClick={handleRemoveScreenshot}
+                  disabled={deletingScreenshot}
+                  style={{
+                    borderRadius: '8px',
+                    border: '1px solid #7f1d1d',
+                    background: '#450a0a',
+                    color: '#fecaca',
+                    padding: '4px 8px',
+                    cursor: deletingScreenshot ? 'wait' : 'pointer',
+                    opacity: deletingScreenshot ? 0.7 : 1,
+                    fontSize: '12px',
+                  }}
+                >
+                  {deletingScreenshot ? 'Removing...' : 'Remove'}
+                </button>
+              </div>
+            </div>
           ) : null}
           {notice ? (
             <p style={{ margin: '8px 0 0', color: '#bfdbfe', fontSize: '12px' }}>{notice}</p>
@@ -1277,20 +1371,19 @@ export function FeedbackWidget({
               </button>
               <button
                 type="button"
-                onClick={handleRevertToOriginal}
-                disabled={!hasAnnotations && !currentHasUndo && !currentHasRedo}
+                onClick={handleRevertLastAnnotation}
+                disabled={!hasAnnotations}
                 style={{
                   borderRadius: '8px',
                   border: '1px solid #475569',
                   background: '#0f172a',
                   color: '#f8fafc',
                   padding: '6px 10px',
-                  cursor:
-                    hasAnnotations || currentHasUndo || currentHasRedo ? 'pointer' : 'not-allowed',
-                  opacity: hasAnnotations || currentHasUndo || currentHasRedo ? 1 : 0.5,
+                  cursor: hasAnnotations ? 'pointer' : 'not-allowed',
+                  opacity: hasAnnotations ? 1 : 0.5,
                 }}
               >
-                Revert
+                Revert last
               </button>
             </div>
           </div>

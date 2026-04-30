@@ -11,7 +11,8 @@ Floating feedback/chat widget plugin for Payload CMS admin and selected Next.js 
   - message input
   - current page path capture
   - optional CSS selector capture
-  - screenshot capture, annotation, clipboard paste, and file upload
+  - current-tab-first screenshot capture, full-screen annotation, clipboard paste, and file upload
+  - native HTML5 tools for pen, rectangle, arrow, text, undo, redo, clear, and revert
 - Email notification on feedback creation through configured Payload email adapter
 - Frontend allowlist route matching helper
 - Strict media collection validation with fail-fast startup errors
@@ -51,6 +52,7 @@ export default buildConfig({
       screenshot: {
         maxFileSizeBytes: 5 * 1024 * 1024,
         allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp'],
+        capturePolicy: 'current-tab-first',
       },
       maxMessageLength: 3000,
       frontend: {
@@ -74,6 +76,13 @@ export default buildConfig({
 - `maxMessageLength?: number` default `3000`
 - `frontend?: { enabled?: boolean; include?: string[] }`
 - `frontendRouteMatcher?: (pathname: string) => boolean`
+
+## Screenshot Capture Behavior
+
+- `current-tab-first` is the default. The widget prefers the active browser tab and still accepts window or screen capture if the browser returns a broader surface.
+- `strict-current-tab` requires the captured surface to resolve as a browser tab and fails otherwise.
+- `any-surface` allows the browser to offer any supported surface without tab-first constraints.
+- Captured, pasted, and uploaded images all open in the same full-screen HTML5 annotation editor and are exported as a flattened PNG before upload.
 
 ## Storage Adapter Compatibility
 

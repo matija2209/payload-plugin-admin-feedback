@@ -136,9 +136,12 @@ export const createAdminFeedbackCollection = (
     },
     {
       name: 'screenshot',
-      type: 'relationship',
+      type: 'upload',
       relationTo: mediaCollectionSlug as never,
       required: false,
+      admin: {
+        description: 'Uploaded screenshot preview',
+      },
     },
     {
       name: 'createdBy',

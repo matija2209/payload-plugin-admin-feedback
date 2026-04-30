@@ -1,0 +1,17 @@
+{
+  "name": "payload-plugin-admin-feedback",
+  "version": "0.1.0",
+  "description": "Floating admin feedback widget plugin for Payload CMS.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client/index.ts"
+  },
+  "peerDependencies": {
+    "payload": "^3.82.1",
+    "react": "^19.0.0"
+  }
+}

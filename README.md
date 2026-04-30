@@ -48,10 +48,13 @@ export default buildConfig({
     adminFeedbackPlugin({
       emailTo: 'it@example.com',
       fromLabel: 'Store Admin Feedback',
+      fromName: 'Payload Admin',
+      fromAddress: 'noreply@example.com',
       allowScreenshotUpload: true,
-      mediaCollectionSlug: 'media',
+      mediaCollectionSlug: 'files',
       strictMediaCollection: true,
       screenshot: {
+        enabled: true,
         maxFileSizeBytes: 5 * 1024 * 1024,
         allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp'],
         capturePolicy: 'current-tab-first',
@@ -67,6 +70,8 @@ export default buildConfig({
 ```
 
 This registers the `admin-feedback` collection with custom endpoints (`/submit`, `/upload`, `/upload/:id`) — no additional API routes are needed.
+
+If your project stores uploads in a collection named `files` instead of `media`, set `mediaCollectionSlug: 'files'` exactly as shown above. The plugin validates that the target collection exists and is upload-enabled during startup.
 
 ### 2. Add the admin panel widget
 
@@ -126,18 +131,23 @@ export default async function LocaleLayout({ children, params }) {
 ## Plugin Options
 
 - `enabled?: boolean` default `true`
-- `emailTo: string | string[]` required
-- `fromLabel?: string`
-- `allowScreenshotUpload?: boolean` default `true`
-- `mediaCollectionSlug?: string` default `'media'`
-- `strictMediaCollection?: boolean` default `true`
-- `screenshot?: { enabled?: boolean; maxFileSizeBytes?: number; allowedMimeTypes?: string[]; capturePolicy?: 'current-tab-first' | 'strict-current-tab' | 'any-surface' }`
+- `emailTo: string | string[]` required recipient address or addresses
+- `fromLabel?: string` label used by the widget and email output
+- `fromName?: string` optional sender name for feedback emails
+- `fromAddress?: string` optional sender address for feedback emails
+- `email?: Config['email']` optional Payload email config injected only when `config.email` is not already set
+- `allowScreenshotUpload?: boolean` default `true`; enables image upload support in the widget, including annotated screenshot uploads
 - `maxMessageLength?: number` default `3000`
+- `mediaCollectionSlug?: string` default `'media'`; slug of the upload-enabled collection used for image uploads
+- `strictMediaCollection?: boolean` default `true`; when `true`, startup fails if `mediaCollectionSlug` is missing or not upload-enabled
+- `screenshot?: { enabled?: boolean; maxFileSizeBytes?: number; allowedMimeTypes?: string[]; capturePolicy?: 'current-tab-first' | 'strict-current-tab' | 'any-surface' }`
 - `frontend?: { enabled?: boolean; include?: string[] }`
-- `frontendRouteMatcher?: (pathname: string) => boolean`
+- `frontendRouteMatcher?: (pathname: string) => boolean` optional custom route matcher for frontend display logic
 
 ## Screenshot Capture Behavior
 
+- `allowScreenshotUpload: false` disables image uploads from the widget entirely, including saving annotated screenshots.
+- `screenshot.enabled: false` disables browser screenshot capture while still allowing regular file uploads if `allowScreenshotUpload` remains `true`.
 - `current-tab-first` is the default. The widget prefers the active browser tab and still accepts window or screen capture if the browser returns a broader surface.
 - `strict-current-tab` requires the captured surface to resolve as a browser tab and fails otherwise.
 - `any-surface` allows the browser to offer any supported surface without tab-first constraints.
@@ -148,8 +158,23 @@ export default async function LocaleLayout({ children, params }) {
 The plugin uploads images through the resolved Payload upload collection, not directly to a specific storage adapter.
 
 - If your upload collection is configured with `@payloadcms/storage-*`, uploads are automatically stored there.
-- If the configured collection slug is missing or not upload-enabled, plugin initialization fails with a clear error.
-- In strict mode (default), there are no fallback guesses to other collections.
+- If `strictMediaCollection` is `true` (default), plugin initialization fails when the configured `mediaCollectionSlug` is missing or not upload-enabled.
+- If `strictMediaCollection` is `false` and the configured slug is missing, the plugin falls back to `'media'` only when a `'media'` collection exists and is upload-enabled.
+- A collection that exists but is not upload-enabled still fails validation.
+
+## Custom Frontend Matching
+
+Use `frontend.include` for simple glob-style path matching. Use `frontendRouteMatcher` when widget visibility depends on custom logic that cannot be expressed as a simple allowlist.
+
+```ts
+adminFeedbackPlugin({
+  emailTo: 'it@example.com',
+  frontend: {
+    enabled: true,
+  },
+  frontendRouteMatcher: (pathname) => pathname.startsWith('/app') && !pathname.startsWith('/app/embed'),
+})
+```
 
 ## Migration Notes
 

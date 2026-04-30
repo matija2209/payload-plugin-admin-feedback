@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload';
+import type { PayloadRequest } from 'payload';
 import { headersWithCors } from 'payload';
 
 import { sendFeedbackEmail } from '../server/sendFeedbackEmail';
@@ -13,10 +14,10 @@ const trim = (value: unknown): string | null => {
   return nextValue.length > 0 ? nextValue : null;
 };
 
-const corsHeaders = (req: Request, init?: HeadersInit): Headers =>
+const corsHeaders = (req: PayloadRequest, init?: HeadersInit): Headers =>
   headersWithCors({
     headers: new Headers(init),
-    req,
+    req: req as unknown as Request,
   });
 
 export const createAdminFeedbackCollection = (
@@ -46,7 +47,7 @@ export const createAdminFeedbackCollection = (
         method: 'post',
         handler: async (req) => {
           try {
-            const body = await req.json();
+            const body = await (req as unknown as Request).json();
             const message = trim(body?.message);
             if (!message) {
               return Response.json(
@@ -97,7 +98,7 @@ export const createAdminFeedbackCollection = (
               );
             }
 
-            const formData = await req.formData();
+            const formData = await (req as unknown as Request).formData();
             const file = formData.get('file');
             const altRaw = formData.get('alt');
             const alt = typeof altRaw === 'string' ? altRaw.trim() : '';
@@ -117,7 +118,7 @@ export const createAdminFeedbackCollection = (
             }
 
             const media = await req.payload.create({
-              collection: mediaCollectionSlug,
+              collection: mediaCollectionSlug as 'media',
               data: {
                 alt: alt || file.name,
               },
@@ -162,8 +163,8 @@ export const createAdminFeedbackCollection = (
             }
 
             await req.payload.delete({
-              collection: mediaCollectionSlug,
-              id,
+              collection: mediaCollectionSlug as 'media',
+              id: id as string,
             });
 
             return Response.json(

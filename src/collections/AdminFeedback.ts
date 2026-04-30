@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload';
 
 import { sendFeedbackEmail } from '../server/sendFeedbackEmail';
-import type { AdminFeedbackPluginOptions } from '../types';
+import type { ResolvedAdminFeedbackPluginOptions } from '../types';
 
 const trim = (value: unknown): string | null => {
   if (typeof value !== 'string') {
@@ -13,7 +13,8 @@ const trim = (value: unknown): string | null => {
 };
 
 export const createAdminFeedbackCollection = (
-  options: AdminFeedbackPluginOptions,
+  options: ResolvedAdminFeedbackPluginOptions,
+  mediaCollectionSlug: string,
 ): CollectionConfig => ({
   slug: 'admin-feedback',
   admin: {
@@ -136,7 +137,7 @@ export const createAdminFeedbackCollection = (
     {
       name: 'screenshot',
       type: 'relationship',
-      relationTo: 'media',
+      relationTo: mediaCollectionSlug as never,
       required: false,
     },
     {

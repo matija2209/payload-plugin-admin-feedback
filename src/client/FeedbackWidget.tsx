@@ -23,6 +23,8 @@ type FeedbackWidgetProps = {
   submitLabel?: string;
   uploadLabel?: string;
   allowScreenshotUpload?: boolean;
+  screenshotMaxFileSizeBytes?: number;
+  screenshotAllowedMimeTypes?: string[];
   onSubmit: (payload: SubmitPayload) => Promise<SubmitResult>;
   onUpload?: (formData: FormData) => Promise<UploadResult>;
 };
@@ -30,6 +32,11 @@ type FeedbackWidgetProps = {
 type CaptureData = {
   selector: string;
   selectedText: string;
+};
+
+type AnnotationPoint = {
+  x: number;
+  y: number;
 };
 
 const getCssSelector = (element: Element): string => {
@@ -70,11 +77,39 @@ const getCssSelector = (element: Element): string => {
   return parts.join(' > ');
 };
 
+const fileToDataUrl = async (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error('Unsupported image format.'));
+    };
+    reader.onerror = () => reject(new Error('Could not read image.'));
+    reader.readAsDataURL(file);
+  });
+
+const canvasToFile = async (canvas: HTMLCanvasElement): Promise<File> => {
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((nextBlob) => resolve(nextBlob), 'image/png');
+  });
+
+  if (!blob) {
+    throw new Error('Failed to prepare annotated screenshot.');
+  }
+
+  return new File([blob], `feedback-${Date.now()}.png`, { type: 'image/png' });
+};
+
 export function FeedbackWidget({
   title = 'Povratna informacija',
   submitLabel = 'Poslji',
   uploadLabel = 'Nalozi sliko',
   allowScreenshotUpload = true,
+  screenshotMaxFileSizeBytes = 5 * 1024 * 1024,
+  screenshotAllowedMimeTypes = ['image/png', 'image/jpeg', 'image/webp'],
   onSubmit,
   onUpload,
 }: FeedbackWidgetProps) {
@@ -87,7 +122,14 @@ export function FeedbackWidget({
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [currentPath, setCurrentPath] = React.useState('/');
+  const [annotating, setAnnotating] = React.useState(false);
+  const [annotationImage, setAnnotationImage] = React.useState<string | null>(null);
+  const [annotationColor, setAnnotationColor] = React.useState('#ef4444');
+  const [annotationSize, setAnnotationSize] = React.useState(3);
   const hoverTargetRef = React.useRef<Element | null>(null);
+  const annotationCanvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  const drawingRef = React.useRef(false);
+  const lastPointRef = React.useRef<AnnotationPoint | null>(null);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -173,13 +215,20 @@ export function FeedbackWidget({
     };
   }, [captureMode]);
 
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
-    if (!onUpload) {
-      return;
+  const validateImageFile = (file: File): string | null => {
+    if (!screenshotAllowedMimeTypes.includes(file.type)) {
+      return `Podprti tipi slik: ${screenshotAllowedMimeTypes.join(', ')}`;
     }
 
-    const file = event.target.files?.[0];
-    if (!file) {
+    if (file.size > screenshotMaxFileSizeBytes) {
+      return `Slika je prevelika. Najvecja velikost: ${Math.round(screenshotMaxFileSizeBytes / 1024 / 1024)}MB.`;
+    }
+
+    return null;
+  };
+
+  const uploadImageFile = async (file: File): Promise<void> => {
+    if (!onUpload) {
       return;
     }
 
@@ -197,8 +246,191 @@ export function FeedbackWidget({
     } else {
       setError(result.error);
     }
+  };
 
+  const handleStartAnnotation = async (file: File): Promise<void> => {
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setAnnotationImage(dataUrl);
+      setAnnotating(true);
+      setError(null);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Napaka pri obdelavi slike.');
+    }
+  };
+
+  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = event.target.files?.[0];
+    if (file) {
+      await handleStartAnnotation(file);
+    }
     event.target.value = '';
+  };
+
+  const handleCaptureScreenshot = async (): Promise<void> => {
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      setError('Brskalnik ne podpira zajema zaslona.');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: 'browser' as const },
+        audio: false,
+      });
+
+      const track = stream.getVideoTracks()[0];
+      if (!track) {
+        setError('Zajem zaslona ni uspel.');
+        return;
+      }
+
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.muted = true;
+      await video.play();
+
+      const width = video.videoWidth || window.innerWidth;
+      const height = video.videoHeight || window.innerHeight;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (!context) {
+        setError('Brskalnik ne podpira canvas konteksta.');
+        stream.getTracks().forEach((item) => item.stop());
+        return;
+      }
+
+      context.drawImage(video, 0, 0, width, height);
+      video.pause();
+      stream.getTracks().forEach((item) => item.stop());
+
+      const captureFile = await canvasToFile(canvas);
+      await handleStartAnnotation(captureFile);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Zajem zaslona ni uspel.');
+    }
+  };
+
+  React.useEffect(() => {
+    if (!open || !allowScreenshotUpload) {
+      return;
+    }
+
+    const onPaste = async (event: ClipboardEvent): Promise<void> => {
+      const file = Array.from(event.clipboardData?.items || [])
+        .find((item) => item.type.startsWith('image/'))
+        ?.getAsFile();
+      if (!file) {
+        return;
+      }
+
+      event.preventDefault();
+      await handleStartAnnotation(file);
+    };
+
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [open, allowScreenshotUpload]);
+
+  React.useEffect(() => {
+    if (!annotating || !annotationImage || !annotationCanvasRef.current) {
+      return;
+    }
+
+    const canvas = annotationCanvasRef.current;
+    const context = canvas.getContext('2d');
+    if (!context) {
+      setError('Brskalnik ne podpira canvas konteksta.');
+      return;
+    }
+
+    const image = new Image();
+    image.onload = () => {
+      const maxWidth = 640;
+      const scale = image.width > maxWidth ? maxWidth / image.width : 1;
+      canvas.width = Math.round(image.width * scale);
+      canvas.height = Math.round(image.height * scale);
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    };
+    image.src = annotationImage;
+  }, [annotating, annotationImage]);
+
+  const drawSegment = (
+    context: CanvasRenderingContext2D,
+    fromPoint: AnnotationPoint,
+    toPoint: AnnotationPoint,
+  ): void => {
+    context.strokeStyle = annotationColor;
+    context.lineWidth = annotationSize;
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    context.beginPath();
+    context.moveTo(fromPoint.x, fromPoint.y);
+    context.lineTo(toPoint.x, toPoint.y);
+    context.stroke();
+  };
+
+  const getPoint = (
+    event: React.MouseEvent<HTMLCanvasElement>,
+    canvas: HTMLCanvasElement,
+  ): AnnotationPoint => {
+    const bounds = canvas.getBoundingClientRect();
+    return { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
+  };
+
+  const handleCanvasPointerDown = (event: React.MouseEvent<HTMLCanvasElement>): void => {
+    if (!annotationCanvasRef.current) {
+      return;
+    }
+
+    const nextPoint = getPoint(event, annotationCanvasRef.current);
+    drawingRef.current = true;
+    lastPointRef.current = nextPoint;
+  };
+
+  const handleCanvasPointerMove = (event: React.MouseEvent<HTMLCanvasElement>): void => {
+    if (!drawingRef.current || !annotationCanvasRef.current) {
+      return;
+    }
+
+    const canvas = annotationCanvasRef.current;
+    const context = canvas.getContext('2d');
+    if (!context || !lastPointRef.current) {
+      return;
+    }
+
+    const nextPoint = getPoint(event, canvas);
+    drawSegment(context, lastPointRef.current, nextPoint);
+    lastPointRef.current = nextPoint;
+  };
+
+  const handleCanvasPointerUp = (): void => {
+    drawingRef.current = false;
+    lastPointRef.current = null;
+  };
+
+  const handleApplyAnnotation = async (): Promise<void> => {
+    if (!annotationCanvasRef.current) {
+      return;
+    }
+
+    try {
+      const file = await canvasToFile(annotationCanvasRef.current);
+      await uploadImageFile(file);
+      setAnnotating(false);
+      setAnnotationImage(null);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Napaka pri izvozu slike.');
+    }
   };
 
   const handleSubmit = async (): Promise<void> => {
@@ -289,6 +521,22 @@ export function FeedbackWidget({
             }}
           />
           <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+            {allowScreenshotUpload && onUpload ? (
+              <button
+                type="button"
+                onClick={handleCaptureScreenshot}
+                style={{
+                  borderRadius: '8px',
+                  border: '1px solid #4b5563',
+                  background: '#1f2937',
+                  color: '#f9fafb',
+                  padding: '6px 8px',
+                  cursor: 'pointer',
+                }}
+              >
+                Zajemi zaslon
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => setCaptureMode((value) => !value)}
@@ -319,6 +567,11 @@ export function FeedbackWidget({
               </label>
             ) : null}
           </div>
+          {allowScreenshotUpload && onUpload ? (
+            <p style={{ margin: '8px 0 0', fontSize: '11px', opacity: 0.8 }}>
+              Prilepite sliko iz odlozisca s Ctrl/Cmd+V.
+            </p>
+          ) : null}
           {captureData ? (
             <p style={{ margin: '8px 0 0', fontSize: '12px', opacity: 0.8 }}>
               Selector: {captureData.selector}
@@ -360,6 +613,91 @@ export function FeedbackWidget({
             >
               {submitting ? 'Posiljam...' : submitLabel}
             </button>
+          </div>
+        </div>
+      ) : null}
+      {annotating ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: '0',
+            zIndex: 10000,
+            background: 'rgba(0,0,0,0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+        >
+          <div
+            style={{
+              background: '#111827',
+              border: '1px solid #374151',
+              borderRadius: '12px',
+              padding: '12px',
+              width: 'min(90vw, 760px)',
+            }}
+          >
+            <h3 style={{ margin: '0 0 8px', fontSize: '16px', color: '#f9fafb' }}>Oznaci sliko</h3>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+              <input
+                type="color"
+                value={annotationColor}
+                onChange={(event) => setAnnotationColor(event.target.value)}
+                aria-label="Barva oznake"
+              />
+              <input
+                type="range"
+                min={1}
+                max={12}
+                value={annotationSize}
+                onChange={(event) => setAnnotationSize(Number(event.target.value))}
+                aria-label="Debelina oznake"
+              />
+            </div>
+            <div style={{ overflow: 'auto', maxHeight: '70vh' }}>
+              <canvas
+                ref={annotationCanvasRef}
+                onMouseDown={handleCanvasPointerDown}
+                onMouseMove={handleCanvasPointerMove}
+                onMouseUp={handleCanvasPointerUp}
+                onMouseLeave={handleCanvasPointerUp}
+                style={{ width: '100%', cursor: 'crosshair', display: 'block' }}
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setAnnotating(false);
+                  setAnnotationImage(null);
+                }}
+                style={{
+                  borderRadius: '8px',
+                  border: '1px solid #4b5563',
+                  background: '#1f2937',
+                  color: '#f9fafb',
+                  padding: '6px 10px',
+                  cursor: 'pointer',
+                }}
+              >
+                Preklici
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyAnnotation}
+                style={{
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#16a34a',
+                  color: '#f9fafb',
+                  padding: '6px 10px',
+                  cursor: 'pointer',
+                }}
+              >
+                Uporabi sliko
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

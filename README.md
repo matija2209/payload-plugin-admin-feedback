@@ -9,15 +9,27 @@ Floating feedback/chat widget plugin for Payload CMS admin and selected Next.js 
   - message input
   - current page path capture
   - optional CSS selector capture
-  - optional screenshot upload (via media collection)
+  - screenshot capture, annotation, clipboard paste, and file upload
 - Email notification on feedback creation through configured Payload email adapter
 - Frontend allowlist route matching helper
+- Strict media collection validation with fail-fast startup errors
 
 ## Install
 
 ```bash
 pnpm add payload-plugin-admin-feedback
 ```
+
+## Requirements
+
+- `payload` `^3.84.1` (native advanced plugin API with `definePlugin`)
+- `react` ^19
+
+## Version Compatibility
+
+| Plugin Version | Payload Version |
+| -------------- | --------------- |
+| 1.x.x          | ^3.84.1         |
 
 ## Usage
 
@@ -32,6 +44,12 @@ export default buildConfig({
       emailTo: 'it@example.com',
       fromLabel: 'Store Admin Feedback',
       allowScreenshotUpload: true,
+      mediaCollectionSlug: 'media',
+      strictMediaCollection: true,
+      screenshot: {
+        maxFileSizeBytes: 5 * 1024 * 1024,
+        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp'],
+      },
       maxMessageLength: 3000,
       frontend: {
         enabled: true,
@@ -48,9 +66,25 @@ export default buildConfig({
 - `emailTo: string | string[]` required
 - `fromLabel?: string`
 - `allowScreenshotUpload?: boolean` default `true`
+- `mediaCollectionSlug?: string` default `'media'`
+- `strictMediaCollection?: boolean` default `true`
+- `screenshot?: { enabled?: boolean; maxFileSizeBytes?: number; allowedMimeTypes?: string[] }`
 - `maxMessageLength?: number` default `3000`
 - `frontend?: { enabled?: boolean; include?: string[] }`
 - `frontendRouteMatcher?: (pathname: string) => boolean`
+
+## Storage Adapter Compatibility
+
+The plugin uploads images through the resolved Payload upload collection, not directly to a specific storage adapter.
+
+- If your upload collection is configured with `@payloadcms/storage-*`, uploads are automatically stored there.
+- If the configured collection slug is missing or not upload-enabled, plugin initialization fails with a clear error.
+- In strict mode (default), there are no fallback guesses to other collections.
+
+## Migration Notes
+
+- The plugin uses native Payload advanced plugin metadata (`slug`, `order`, `options`) via `definePlugin`.
+- Existing usage with `adminFeedbackPlugin({ ...options })` remains unchanged.
 
 ## License
 

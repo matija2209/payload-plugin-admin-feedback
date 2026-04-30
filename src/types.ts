@@ -5,14 +5,33 @@ export type FrontendDisplayConfig = {
   include?: string[];
 };
 
+export type ScreenshotConfig = {
+  enabled?: boolean;
+  maxFileSizeBytes?: number;
+  allowedMimeTypes?: string[];
+};
+
 export type AdminFeedbackPluginOptions = {
   enabled?: boolean;
   emailTo: string | string[];
   fromLabel?: string;
   allowScreenshotUpload?: boolean;
   maxMessageLength?: number;
+  mediaCollectionSlug?: string;
+  strictMediaCollection?: boolean;
+  screenshot?: ScreenshotConfig;
   frontend?: FrontendDisplayConfig;
   frontendRouteMatcher?: (pathname: string) => boolean;
+};
+
+export type ResolvedAdminFeedbackPluginOptions = Omit<
+  AdminFeedbackPluginOptions,
+  'frontend' | 'screenshot' | 'mediaCollectionSlug' | 'strictMediaCollection'
+> & {
+  frontend: Required<FrontendDisplayConfig>;
+  screenshot: Required<ScreenshotConfig>;
+  mediaCollectionSlug: string;
+  strictMediaCollection: boolean;
 };
 
 export type FeedbackMetaInput = {

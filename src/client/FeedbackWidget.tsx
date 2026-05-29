@@ -98,6 +98,12 @@ type EditorHistory = {
   undoStack: AnnotationOperation[][];
 };
 
+type TextCursor = {
+  domX: number;
+  domY: number;
+  canvasPoint: AnnotationPoint;
+};
+
 type ExtendedDisplayMediaStreamOptions = DisplayMediaStreamOptions & {
   preferCurrentTab?: boolean;
   selfBrowserSurface?: 'include' | 'exclude';
@@ -428,6 +434,139 @@ const drawOperation = (
 const isShapeMeaningful = (start: AnnotationPoint, end: AnnotationPoint): boolean =>
   Math.abs(end.x - start.x) > 3 || Math.abs(end.y - start.y) > 3;
 
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
+function ChatIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function XIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function CameraIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
+  );
+}
+
+function CursorIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4l7.07 17 2.51-7.39L21 11.07z" />
+    </svg>
+  );
+}
+
+function UploadIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="16 16 12 12 8 16" />
+      <line x1="12" y1="12" x2="12" y2="21" />
+      <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+    </svg>
+  );
+}
+
+function SendIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  );
+}
+
+function CheckCircleIcon() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  );
+}
+
+function PenIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 19l7-7 3 3-7 7-3-3z" />
+      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+      <path d="M2 2l7.586 7.586" />
+      <circle cx="11" cy="11" r="2" />
+    </svg>
+  );
+}
+
+function RectIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+    </svg>
+  );
+}
+
+function ArrowIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="5" y1="19" x2="19" y2="5" />
+      <polyline points="13 5 19 5 19 11" />
+    </svg>
+  );
+}
+
+function TextIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="4 7 4 4 20 4 20 7" />
+      <line x1="9" y1="20" x2="15" y2="20" />
+      <line x1="12" y1="4" x2="12" y2="20" />
+    </svg>
+  );
+}
+
+function UndoIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 14 4 9 9 4" />
+      <path d="M20 20v-7a4 4 0 0 0-4-4H4" />
+    </svg>
+  );
+}
+
+function RedoIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 14 20 9 15 4" />
+      <path d="M4 20v-7a4 4 0 0 1 4-4h12" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4h6v2" />
+    </svg>
+  );
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export function FeedbackWidget({
   title = 'Admin feedback',
   submitLabel = 'Send',
@@ -449,6 +588,9 @@ export function FeedbackWidget({
   const [uploading, setUploading] = React.useState(false);
   const [deletingScreenshot, setDeletingScreenshot] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [submitted, setSubmitted] = React.useState(false);
+  const [currentPath, setCurrentPath] = React.useState('');
+  const [capturingScreen, setCapturingScreen] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [notice, setNotice] = React.useState<string | null>(null);
   const [annotating, setAnnotating] = React.useState(false);
@@ -458,15 +600,28 @@ export function FeedbackWidget({
   const [annotationTool, setAnnotationTool] = React.useState<AnnotationTool>('pen');
   const [annotationColor, setAnnotationColor] = React.useState(DEFAULT_COLORS[0]);
   const [annotationSize, setAnnotationSize] = React.useState(4);
-  const [annotationText, setAnnotationText] = React.useState('');
+  const [textCursor, setTextCursor] = React.useState<TextCursor | null>(null);
+  const [inlineText, setInlineText] = React.useState('');
   const hoverTargetRef = React.useRef<Element | null>(null);
   const annotationCanvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  const annotationScrollRef = React.useRef<HTMLDivElement | null>(null);
+  const textInputRef = React.useRef<HTMLInputElement | null>(null);
   const pointerIdRef = React.useRef<number | null>(null);
   const draftOperationRef = React.useRef<DrawableDraftOperation | null>(null);
+  // Refs keep commitTextInput free of stale-closure issues
+  const inlineTextRef = React.useRef('');
+  const textCursorRef = React.useRef<TextCursor | null>(null);
+  const annotationColorRef = React.useRef(DEFAULT_COLORS[0]);
+  const annotationSizeRef = React.useRef(4);
 
   React.useEffect(() => {
     draftOperationRef.current = draftOperation;
   }, [draftOperation]);
+
+  React.useEffect(() => { inlineTextRef.current = inlineText; }, [inlineText]);
+  React.useEffect(() => { textCursorRef.current = textCursor; }, [textCursor]);
+  React.useEffect(() => { annotationColorRef.current = annotationColor; }, [annotationColor]);
+  React.useEffect(() => { annotationSizeRef.current = annotationSize; }, [annotationSize]);
 
   React.useEffect(() => {
     if (!captureMode) {
@@ -559,6 +714,22 @@ export function FeedbackWidget({
     }
   }, [annotating, draftOperation, editorHistory.operations, editorImage]);
 
+  React.useEffect(() => {
+    setCurrentPath(window.location.pathname);
+  }, []);
+
+  // Auto-close success panel after 2.5 s
+  React.useEffect(() => {
+    if (!submitted) return;
+    const timer = setTimeout(() => {
+      setOpen(false);
+      setSubmitted(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [submitted]);
+
+  // (autoFocus on the input handles focus; no manual focus effect needed)
+
   const validateImageFile = React.useCallback(
     (file: File): string | null => {
       if (!screenshotAllowedMimeTypes.includes(file.type)) {
@@ -609,6 +780,8 @@ export function FeedbackWidget({
     setEditorImage(null);
     setEditorHistory(DEFAULT_HISTORY);
     setDraftOperation(null);
+    setTextCursor(null);
+    setInlineText('');
     draftOperationRef.current = null;
   }, []);
 
@@ -625,6 +798,8 @@ export function FeedbackWidget({
         setEditorImage(nextImage);
         setEditorHistory(DEFAULT_HISTORY);
         setDraftOperation(null);
+        setTextCursor(null);
+        setInlineText('');
         draftOperationRef.current = null;
         setAnnotating(true);
         setError(null);
@@ -673,6 +848,24 @@ export function FeedbackWidget({
     }));
   }, []);
 
+  const commitTextInput = React.useCallback((): void => {
+    const text = inlineTextRef.current.trim();
+    const cursor = textCursorRef.current;
+    if (text && cursor) {
+      const operation: TextOperation = {
+        id: createOperationId(),
+        type: 'text',
+        style: { color: annotationColorRef.current, size: annotationSizeRef.current },
+        point: cursor.canvasPoint,
+        text,
+      };
+      appendOperation(operation);
+    }
+    textCursorRef.current = null;
+    setTextCursor(null);
+    setInlineText('');
+  }, [appendOperation]);
+
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = event.target.files?.[0];
     if (file) {
@@ -684,6 +877,8 @@ export function FeedbackWidget({
   const handleCaptureScreenshot = async (): Promise<void> => {
     try {
       setError(null);
+      setCapturingScreen(true);
+      await new Promise((resolve) => setTimeout(resolve, 120));
       const { file, surface } = await captureScreenshotFile(capturePolicy);
       if (capturePolicy === 'current-tab-first') {
         if (surface === 'browser') {
@@ -702,6 +897,8 @@ export function FeedbackWidget({
       await handleStartAnnotation(file);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Screen capture failed.');
+    } finally {
+      setCapturingScreen(false);
     }
   };
 
@@ -769,23 +966,28 @@ export function FeedbackWidget({
     setError(null);
 
     const canvas = annotationCanvasRef.current;
-    const point = getCanvasPoint(event, canvas);
+    const canvasPoint = getCanvasPoint(event, canvas);
 
     if (annotationTool === 'text') {
-      const text = annotationText.trim();
-      if (!text) {
-        setError('Enter text before placing it on the image.');
-        return;
+      // Commit any in-progress text BEFORE clearing refs (pointerdown fires before blur)
+      const existingText = inlineTextRef.current.trim();
+      const existingCursor = textCursorRef.current;
+      if (existingText && existingCursor) {
+        appendOperation({
+          id: createOperationId(),
+          type: 'text',
+          style: { color: annotationColorRef.current, size: annotationSizeRef.current },
+          point: existingCursor.canvasPoint,
+          text: existingText,
+        });
       }
-
-      const operation: TextOperation = {
-        id: createOperationId(),
-        type: 'text',
-        style: { color: annotationColor, size: annotationSize },
-        point,
-        text,
-      };
-      appendOperation(operation);
+      // Now place new cursor
+      const domX = event.clientX;
+      const domY = event.clientY;
+      inlineTextRef.current = '';
+      textCursorRef.current = { domX, domY, canvasPoint };
+      setInlineText('');
+      setTextCursor({ domX, domY, canvasPoint });
       return;
     }
 
@@ -800,22 +1002,22 @@ export function FeedbackWidget({
             id: createOperationId(),
             type: 'pen',
             style,
-            points: [point],
+            points: [canvasPoint],
           }
         : annotationTool === 'rectangle'
           ? {
               id: createOperationId(),
               type: 'rectangle',
               style,
-              start: point,
-              end: point,
+              start: canvasPoint,
+              end: canvasPoint,
             }
           : {
               id: createOperationId(),
               type: 'arrow',
               style,
-              start: point,
-              end: point,
+              start: canvasPoint,
+              end: canvasPoint,
             };
 
     draftOperationRef.current = nextDraft;
@@ -955,7 +1157,7 @@ export function FeedbackWidget({
     setError(null);
     const result = await onSubmit({
       message: message.trim(),
-      pagePath: typeof window !== 'undefined' ? window.location.pathname : '/',
+      pagePath: currentPath,
       selector: captureData?.selector,
       selectedText: captureData?.selectedText,
       screenshotId,
@@ -977,266 +1179,462 @@ export function FeedbackWidget({
     setScreenshotId(null);
     setScreenshotPreviewUrl(null);
     setNotice(null);
-    setOpen(false);
+    setSubmitted(true);
   };
 
   const currentHasUndo = editorHistory.undoStack.length > 0;
   const currentHasRedo = editorHistory.redoStack.length > 0;
   const hasAnnotations = editorHistory.operations.length > 0;
 
+  const toolBtn = (tool: AnnotationTool, icon: React.ReactNode, label: string) => (
+    <button
+      key={tool}
+      type="button"
+      title={label}
+      onClick={() => setAnnotationTool(tool)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '5px',
+        borderRadius: '6px',
+        border: annotationTool === tool ? '1px solid #4ade80' : '1px solid #334155',
+        background: annotationTool === tool ? 'rgba(74,222,128,0.12)' : '#0f172a',
+        color: annotationTool === tool ? '#4ade80' : '#94a3b8',
+        padding: '5px 9px',
+        cursor: 'pointer',
+        fontSize: '12px',
+        fontWeight: 500,
+      }}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+
+  const iconBtn = (
+    onClick: () => void,
+    icon: React.ReactNode,
+    label: string,
+    disabled = false,
+  ) => (
+    <button
+      type="button"
+      title={label}
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        borderRadius: '6px',
+        border: '1px solid #334155',
+        background: '#0f172a',
+        color: disabled ? '#475569' : '#94a3b8',
+        padding: '5px 9px',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        fontSize: '12px',
+      }}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+
   return (
     <>
+      <style>{`
+        @keyframes afb-spin-in {
+          from { transform: rotate(-90deg) scale(0.7); opacity: 0; }
+          to   { transform: rotate(0deg)  scale(1);   opacity: 1; }
+        }
+        .afb-icon-enter {
+          animation: afb-spin-in 0.18s ease forwards;
+        }
+      `}</style>
+
+      {/* Floating toggle button */}
       <button
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          if (submitted) return;
+          setOpen((v) => !v);
+        }}
+        title={open ? 'Close feedback' : 'Send feedback'}
         style={{
           position: 'fixed',
           right: '20px',
           bottom: '20px',
           zIndex: 9999,
-          borderRadius: '999px',
-          backgroundColor: '#166534',
+          width: '48px',
+          height: '48px',
+          borderRadius: '50%',
+          backgroundColor: open ? '#374151' : '#15803d',
           color: '#ffffff',
           border: 'none',
-          padding: '10px 14px',
-          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           cursor: 'pointer',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
+          transition: 'background-color 0.2s ease, transform 0.15s ease',
+          visibility: capturingScreen ? 'hidden' : 'visible',
         }}
       >
-        Feedback
+        <span key={open ? 'x' : 'chat'} className="afb-icon-enter">
+          {open ? <XIcon size={20} /> : <ChatIcon />}
+        </span>
       </button>
-      {open ? (
-        <div
-          style={{
-            position: 'fixed',
-            right: '20px',
-            bottom: '72px',
-            width: '360px',
-            background: '#111827',
-            color: '#f9fafb',
-            borderRadius: '12px',
-            border: '1px solid #374151',
-            padding: '12px',
-            zIndex: 9999,
-            boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
-          }}
-        >
-          <h3 style={{ margin: '0 0 8px', fontSize: '16px' }}>{title}</h3>
-          <p style={{ margin: '0 0 8px', fontSize: '12px', opacity: 0.8 }}>
-            {typeof window !== 'undefined' ? window.location.pathname : '/'}
-          </p>
-          <textarea
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            rows={5}
-            placeholder="Describe the issue..."
+
+      {/* Feedback panel — always mounted, CSS-driven visibility */}
+      <div
+        style={{
+          position: 'fixed',
+          right: '20px',
+          bottom: '80px',
+          width: '360px',
+          background: '#0f172a',
+          color: '#f1f5f9',
+          borderRadius: '14px',
+          border: '1px solid #1e293b',
+          padding: '0',
+          zIndex: 9999,
+          boxShadow: '0 16px 48px rgba(0,0,0,0.55)',
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: 'calc(100vh - 110px)',
+          opacity: open ? 1 : 0,
+          transform: open ? 'scale(1) translateY(0)' : 'scale(0.92) translateY(8px)',
+          pointerEvents: open ? 'auto' : 'none',
+          transformOrigin: 'bottom right',
+          transition: 'opacity 0.18s ease, transform 0.18s ease',
+          visibility: capturingScreen ? 'hidden' : 'visible',
+          overflow: 'hidden',
+        }}
+      >
+        {submitted ? (
+          /* ── Success screen ── */
+          <div
             style={{
-              width: '100%',
-              borderRadius: '8px',
-              border: '1px solid #4b5563',
-              background: '#1f2937',
-              color: '#f9fafb',
-              padding: '8px',
-              resize: 'vertical',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              padding: '40px 24px',
+              textAlign: 'center',
+              color: '#4ade80',
             }}
-          />
-          <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
-            {allowScreenshotUpload && onUpload ? (
-              <button
-                type="button"
-                onClick={handleCaptureScreenshot}
-                style={{
-                  borderRadius: '8px',
-                  border: '1px solid #4b5563',
-                  background: '#1f2937',
-                  color: '#f9fafb',
-                  padding: '6px 8px',
-                  cursor: 'pointer',
-                }}
-              >
-                Capture screen
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => setCaptureMode((value) => !value)}
-              style={{
-                borderRadius: '8px',
-                border: '1px solid #4b5563',
-                background: captureMode ? '#14532d' : '#1f2937',
-                color: '#f9fafb',
-                padding: '6px 8px',
-                cursor: 'pointer',
-              }}
-            >
-              {captureMode ? 'Click an element...' : 'Capture element'}
-            </button>
-            {allowScreenshotUpload && onUpload ? (
-              <label
-                style={{
-                  borderRadius: '8px',
-                  border: '1px solid #4b5563',
-                  background: '#1f2937',
-                  color: '#f9fafb',
-                  padding: '6px 8px',
-                  cursor: 'pointer',
-                }}
-              >
-                {uploading ? 'Uploading...' : uploadLabel}
-                <input
-                  type="file"
-                  accept={screenshotAllowedMimeTypes.join(',')}
-                  onChange={handleUpload}
-                  hidden
-                />
-              </label>
-            ) : null}
+          >
+            <CheckCircleIcon />
+            <div>
+              <p style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 600, color: '#f1f5f9' }}>
+                Feedback sent!
+              </p>
+              <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>
+                Thank you — we'll take a look.
+              </p>
+            </div>
           </div>
-          {allowScreenshotUpload && onUpload ? (
-            <p style={{ margin: '8px 0 0', fontSize: '11px', opacity: 0.8 }}>
-              Paste an image with Ctrl/Cmd+V or capture the current tab first.
-            </p>
-          ) : null}
-          {captureData ? (
-            <p style={{ margin: '8px 0 0', fontSize: '12px', opacity: 0.8 }}>
-              Selector: {captureData.selector}
-            </p>
-          ) : null}
-          {screenshotId ? (
+        ) : (
+          <>
+            {/* ── Header ── */}
             <div
               style={{
-                marginTop: '8px',
-                borderRadius: '10px',
-                border: '1px solid #374151',
-                background: '#0f172a',
-                padding: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 14px 10px',
+                borderBottom: '1px solid #1e293b',
               }}
             >
-              {screenshotPreviewUrl ? (
-                <div style={{ marginBottom: '8px', borderRadius: '8px', overflow: 'hidden' }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={screenshotPreviewUrl}
-                    alt="Annotated screenshot preview"
-                    style={{ width: '100%', height: 'auto', display: 'block' }}
-                  />
-                </div>
-              ) : null}
-              <div
+              <div>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#f1f5f9' }}>
+                  {title}
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#64748b' }}>
+                  {currentPath}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                title="Close"
                 style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#64748b',
+                  cursor: 'pointer',
+                  padding: '4px',
                   display: 'flex',
-                  justifyContent: 'space-between',
                   alignItems: 'center',
-                  gap: '8px',
+                  borderRadius: '6px',
                 }}
               >
-                <p style={{ margin: 0, fontSize: '12px', opacity: 0.8 }}>Media ID: {screenshotId}</p>
-                <button
-                  type="button"
-                  onClick={handleRemoveScreenshot}
-                  disabled={deletingScreenshot}
+                <XIcon size={16} />
+              </button>
+            </div>
+
+            {/* ── Body ── */}
+            <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', minHeight: 0 }}>
+              <textarea
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+                rows={5}
+                placeholder="Describe the issue or share your thoughts…"
+                style={{
+                  width: '100%',
+                  borderRadius: '8px',
+                  border: '1px solid #1e293b',
+                  background: '#1e293b',
+                  color: '#f1f5f9',
+                  padding: '10px',
+                  resize: 'vertical',
+                  fontSize: '13px',
+                  lineHeight: '1.5',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+
+              {/* Tool buttons */}
+              {allowScreenshotUpload && onUpload ? (
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={handleCaptureScreenshot}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      borderRadius: '7px',
+                      border: '1px solid #1e293b',
+                      background: '#1e293b',
+                      color: '#94a3b8',
+                      padding: '5px 9px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <CameraIcon />
+                    Capture screen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCaptureMode((v) => !v)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      borderRadius: '7px',
+                      border: captureMode ? '1px solid #4ade80' : '1px solid #1e293b',
+                      background: captureMode ? 'rgba(74,222,128,0.08)' : '#1e293b',
+                      color: captureMode ? '#4ade80' : '#94a3b8',
+                      padding: '5px 9px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <CursorIcon />
+                    {captureMode ? 'Click an element…' : 'Capture element'}
+                  </button>
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      borderRadius: '7px',
+                      border: '1px solid #1e293b',
+                      background: '#1e293b',
+                      color: '#94a3b8',
+                      padding: '5px 9px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <UploadIcon />
+                    {uploading ? 'Uploading…' : uploadLabel}
+                    <input
+                      type="file"
+                      accept={screenshotAllowedMimeTypes.join(',')}
+                      onChange={handleUpload}
+                      hidden
+                    />
+                  </label>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setCaptureMode((v) => !v)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      borderRadius: '7px',
+                      border: captureMode ? '1px solid #4ade80' : '1px solid #1e293b',
+                      background: captureMode ? 'rgba(74,222,128,0.08)' : '#1e293b',
+                      color: captureMode ? '#4ade80' : '#94a3b8',
+                      padding: '5px 9px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <CursorIcon />
+                    {captureMode ? 'Click an element…' : 'Capture element'}
+                  </button>
+                </div>
+              )}
+
+              {allowScreenshotUpload && onUpload ? (
+                <p style={{ margin: 0, fontSize: '11px', color: '#475569' }}>
+                  Paste an image with Ctrl/Cmd+V or capture the current tab first.
+                </p>
+              ) : null}
+
+              {captureData ? (
+                <p style={{ margin: 0, fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  Element: <code style={{ color: '#94a3b8' }}>{captureData.selector}</code>
+                </p>
+              ) : null}
+
+              {screenshotId ? (
+                <div
                   style={{
-                    borderRadius: '8px',
-                    border: '1px solid #7f1d1d',
-                    background: '#450a0a',
-                    color: '#fecaca',
-                    padding: '4px 8px',
-                    cursor: deletingScreenshot ? 'wait' : 'pointer',
-                    opacity: deletingScreenshot ? 0.7 : 1,
-                    fontSize: '12px',
+                    borderRadius: '10px',
+                    border: '1px solid #1e293b',
+                    background: '#0a0f1e',
+                    padding: '8px',
                   }}
                 >
-                  {deletingScreenshot ? 'Removing...' : 'Remove'}
-                </button>
-              </div>
+                  {screenshotPreviewUrl ? (
+                    <div style={{ marginBottom: '8px', borderRadius: '6px', overflow: 'hidden' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={screenshotPreviewUrl}
+                        alt="Annotated screenshot preview"
+                        style={{ width: '100%', height: 'auto', display: 'block' }}
+                      />
+                    </div>
+                  ) : null}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>
+                      Screenshot attached
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleRemoveScreenshot}
+                      disabled={deletingScreenshot}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        borderRadius: '6px',
+                        border: '1px solid #7f1d1d',
+                        background: '#450a0a',
+                        color: '#fca5a5',
+                        padding: '3px 8px',
+                        cursor: deletingScreenshot ? 'wait' : 'pointer',
+                        opacity: deletingScreenshot ? 0.7 : 1,
+                        fontSize: '11px',
+                      }}
+                    >
+                      <TrashIcon />
+                      {deletingScreenshot ? 'Removing…' : 'Remove'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {notice ? (
+                <p style={{ margin: 0, color: '#93c5fd', fontSize: '12px' }}>{notice}</p>
+              ) : null}
+              {error ? (
+                <p style={{ margin: 0, color: '#fca5a5', fontSize: '12px' }}>{error}</p>
+              ) : null}
             </div>
-          ) : null}
-          {notice ? (
-            <p style={{ margin: '8px 0 0', color: '#bfdbfe', fontSize: '12px' }}>{notice}</p>
-          ) : null}
-          {error ? (
-            <p style={{ margin: '8px 0 0', color: '#fca5a5', fontSize: '12px' }}>{error}</p>
-          ) : null}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px', gap: '8px' }}>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
+
+            {/* ── Footer / Send ── */}
+            <div
               style={{
-                borderRadius: '8px',
-                border: '1px solid #4b5563',
-                background: '#1f2937',
-                color: '#f9fafb',
-                padding: '6px 10px',
-                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                padding: '10px 14px 14px',
+                borderTop: '1px solid #1e293b',
               }}
             >
-              Close
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={submitting}
-              style={{
-                borderRadius: '8px',
-                border: 'none',
-                background: '#16a34a',
-                color: '#f9fafb',
-                padding: '6px 10px',
-                cursor: 'pointer',
-              }}
-            >
-              {submitting ? 'Sending...' : submitLabel}
-            </button>
-          </div>
-        </div>
-      ) : null}
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '7px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#15803d',
+                  color: '#f1f5f9',
+                  padding: '8px 16px',
+                  cursor: submitting ? 'wait' : 'pointer',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  opacity: submitting ? 0.75 : 1,
+                  transition: 'opacity 0.15s ease',
+                }}
+              >
+                <SendIcon />
+                {submitting ? 'Sending…' : submitLabel}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Annotation editor */}
       {annotating && editorImage ? (
         <div
           style={{
             position: 'fixed',
             inset: '0',
             zIndex: 10000,
-            background: 'rgba(3, 7, 18, 0.94)',
-            color: '#f9fafb',
+            background: 'rgba(3, 7, 18, 0.96)',
+            color: '#f8fafc',
             display: 'flex',
             flexDirection: 'column',
           }}
         >
+          {/* Toolbar */}
           <div
             style={{
               display: 'flex',
               flexWrap: 'wrap',
-              gap: '12px',
+              gap: '10px',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '12px 16px',
-              borderBottom: '1px solid rgba(148, 163, 184, 0.2)',
-              background: 'rgba(15, 23, 42, 0.92)',
+              padding: '10px 16px',
+              borderBottom: '1px solid rgba(148, 163, 184, 0.15)',
+              background: 'rgba(15, 23, 42, 0.97)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              <strong style={{ fontSize: '15px' }}>Annotate screenshot</strong>
-              <span style={{ fontSize: '12px', opacity: 0.75 }}>{editorImage.fileName}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <strong style={{ fontSize: '14px', color: '#f1f5f9' }}>Annotate screenshot</strong>
+              <span style={{ fontSize: '11px', color: '#475569' }}>{editorImage.fileName}</span>
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-              <select
-                value={annotationTool}
-                onChange={(event) => setAnnotationTool(event.target.value as AnnotationTool)}
-                aria-label="Annotation tool"
-                style={{
-                  borderRadius: '8px',
-                  border: '1px solid #475569',
-                  background: '#0f172a',
-                  color: '#f8fafc',
-                  padding: '6px 8px',
-                }}
-              >
-                <option value="pen">Pen</option>
-                <option value="rectangle">Rectangle</option>
-                <option value="arrow">Arrow</option>
-                <option value="text">Text</option>
-              </select>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+              {/* Tool selector */}
+              {toolBtn('pen', <PenIcon />, 'Pen')}
+              {toolBtn('rectangle', <RectIcon />, 'Rect')}
+              {toolBtn('arrow', <ArrowIcon />, 'Arrow')}
+              {toolBtn('text', <TextIcon />, 'Text')}
+
+              {/* Color swatches */}
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                 {DEFAULT_COLORS.map((color) => (
                   <button
                     key={color}
@@ -1244,118 +1642,50 @@ export function FeedbackWidget({
                     onClick={() => setAnnotationColor(color)}
                     aria-label={`Select ${color} color`}
                     style={{
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '999px',
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
                       border: annotationColor === color ? '2px solid #f8fafc' : '1px solid #334155',
                       background: color,
                       cursor: 'pointer',
+                      flexShrink: 0,
                     }}
                   />
                 ))}
                 <input
                   type="color"
                   value={annotationColor}
-                  onChange={(event) => setAnnotationColor(event.target.value)}
-                  aria-label="Annotation color"
-                  style={{ width: '34px', height: '34px', border: 'none', background: 'transparent' }}
+                  onChange={(e) => setAnnotationColor(e.target.value)}
+                  aria-label="Custom color"
+                  title="Custom color"
+                  style={{ width: '28px', height: '28px', border: 'none', background: 'transparent', cursor: 'pointer' }}
                 />
               </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+
+              {/* Size */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#64748b' }}>
                 Size
                 <input
                   type="range"
                   min={1}
                   max={18}
                   value={annotationSize}
-                  onChange={(event) => setAnnotationSize(Number(event.target.value))}
-                  aria-label="Annotation size"
+                  onChange={(e) => setAnnotationSize(Number(e.target.value))}
+                  aria-label="Stroke size"
+                  style={{ width: '72px' }}
                 />
               </label>
-              {annotationTool === 'text' ? (
-                <input
-                  type="text"
-                  value={annotationText}
-                  onChange={(event) => setAnnotationText(event.target.value)}
-                  placeholder="Text to place"
-                  aria-label="Annotation text"
-                  style={{
-                    minWidth: '160px',
-                    borderRadius: '8px',
-                    border: '1px solid #475569',
-                    background: '#0f172a',
-                    color: '#f8fafc',
-                    padding: '6px 8px',
-                  }}
-                />
-              ) : null}
-              <button
-                type="button"
-                onClick={handleUndo}
-                disabled={!currentHasUndo}
-                style={{
-                  borderRadius: '8px',
-                  border: '1px solid #475569',
-                  background: '#0f172a',
-                  color: '#f8fafc',
-                  padding: '6px 10px',
-                  cursor: currentHasUndo ? 'pointer' : 'not-allowed',
-                  opacity: currentHasUndo ? 1 : 0.5,
-                }}
-              >
-                Undo
-              </button>
-              <button
-                type="button"
-                onClick={handleRedo}
-                disabled={!currentHasRedo}
-                style={{
-                  borderRadius: '8px',
-                  border: '1px solid #475569',
-                  background: '#0f172a',
-                  color: '#f8fafc',
-                  padding: '6px 10px',
-                  cursor: currentHasRedo ? 'pointer' : 'not-allowed',
-                  opacity: currentHasRedo ? 1 : 0.5,
-                }}
-              >
-                Redo
-              </button>
-              <button
-                type="button"
-                onClick={handleClearAnnotations}
-                disabled={!hasAnnotations}
-                style={{
-                  borderRadius: '8px',
-                  border: '1px solid #475569',
-                  background: '#0f172a',
-                  color: '#f8fafc',
-                  padding: '6px 10px',
-                  cursor: hasAnnotations ? 'pointer' : 'not-allowed',
-                  opacity: hasAnnotations ? 1 : 0.5,
-                }}
-              >
-                Clear
-              </button>
-              <button
-                type="button"
-                onClick={handleRevertLastAnnotation}
-                disabled={!hasAnnotations}
-                style={{
-                  borderRadius: '8px',
-                  border: '1px solid #475569',
-                  background: '#0f172a',
-                  color: '#f8fafc',
-                  padding: '6px 10px',
-                  cursor: hasAnnotations ? 'pointer' : 'not-allowed',
-                  opacity: hasAnnotations ? 1 : 0.5,
-                }}
-              >
-                Revert last
-              </button>
+
+              {/* History controls */}
+              {iconBtn(handleUndo, <UndoIcon />, 'Undo', !currentHasUndo)}
+              {iconBtn(handleRedo, <RedoIcon />, 'Redo', !currentHasRedo)}
+              {iconBtn(handleClearAnnotations, <TrashIcon />, 'Clear', !hasAnnotations)}
             </div>
           </div>
+
+          {/* Canvas area */}
           <div
+            ref={annotationScrollRef}
             style={{
               flex: 1,
               overflow: 'auto',
@@ -1363,6 +1693,7 @@ export function FeedbackWidget({
               display: 'flex',
               alignItems: 'flex-start',
               justifyContent: 'center',
+              position: 'relative',
             }}
           >
             <canvas
@@ -1375,14 +1706,60 @@ export function FeedbackWidget({
                 width: 'min(100%, 1400px)',
                 height: 'auto',
                 display: 'block',
-                borderRadius: '16px',
+                borderRadius: '12px',
                 background: '#ffffff',
-                boxShadow: '0 24px 80px rgba(15, 23, 42, 0.45)',
+                boxShadow: '0 24px 80px rgba(15, 23, 42, 0.6)',
                 touchAction: 'none',
-                cursor: annotationTool === 'text' ? 'copy' : 'crosshair',
+                cursor: annotationTool === 'text' ? 'text' : 'crosshair',
               }}
             />
+            {/* Inline text input — autoFocus + no onBlur to avoid the pointerdown-before-blur race */}
+            {textCursor ? (
+              <input
+                // eslint-disable-next-line jsx-a11y/no-autofocus
+                autoFocus
+                ref={textInputRef}
+                type="text"
+                value={inlineText}
+                onChange={(e) => {
+                  inlineTextRef.current = e.target.value;
+                  setInlineText(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    commitTextInput();
+                  }
+                  if (e.key === 'Escape') {
+                    textCursorRef.current = null;
+                    setTextCursor(null);
+                    setInlineText('');
+                    inlineTextRef.current = '';
+                  }
+                }}
+                placeholder="Type → Enter to place"
+                style={{
+                  position: 'fixed',
+                  left: textCursor.domX,
+                  top: textCursor.domY,
+                  minWidth: '180px',
+                  background: 'rgba(15, 23, 42, 0.92)',
+                  color: annotationColor,
+                  border: '1px dashed rgba(255,255,255,0.6)',
+                  borderRadius: '4px',
+                  padding: '4px 8px',
+                  fontSize: `${Math.max(14, annotationSize * 4)}px`,
+                  fontWeight: 600,
+                  outline: 'none',
+                  zIndex: 10002,
+                  backdropFilter: 'blur(6px)',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
+                }}
+              />
+            ) : null}
           </div>
+
+          {/* Bottom bar */}
           <div
             style={{
               display: 'flex',
@@ -1390,25 +1767,32 @@ export function FeedbackWidget({
               alignItems: 'center',
               gap: '12px',
               flexWrap: 'wrap',
-              padding: '12px 16px',
-              borderTop: '1px solid rgba(148, 163, 184, 0.2)',
-              background: 'rgba(15, 23, 42, 0.92)',
+              padding: '10px 16px',
+              borderTop: '1px solid rgba(148, 163, 184, 0.15)',
+              background: 'rgba(15, 23, 42, 0.97)',
             }}
           >
-            <p style={{ margin: 0, fontSize: '12px', opacity: 0.75 }}>
-              Use mouse, touch, or pen input. Text is placed where you click on the image.
-            </p>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {annotationTool === 'text' ? (
+              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
+                Click on the image to place text at that position.
+              </p>
+            ) : (
+              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
+                Draw on the image, then save when done.
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 type="button"
                 onClick={closeAnnotationEditor}
                 style={{
                   borderRadius: '8px',
-                  border: '1px solid #475569',
+                  border: '1px solid #334155',
                   background: '#0f172a',
-                  color: '#f8fafc',
-                  padding: '8px 12px',
+                  color: '#94a3b8',
+                  padding: '7px 14px',
                   cursor: 'pointer',
+                  fontSize: '13px',
                 }}
               >
                 Cancel
@@ -1418,16 +1802,22 @@ export function FeedbackWidget({
                 onClick={handleApplyAnnotation}
                 disabled={uploading}
                 style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
                   borderRadius: '8px',
                   border: 'none',
-                  background: '#16a34a',
-                  color: '#f8fafc',
-                  padding: '8px 12px',
+                  background: '#15803d',
+                  color: '#f1f5f9',
+                  padding: '7px 14px',
                   cursor: uploading ? 'wait' : 'pointer',
                   opacity: uploading ? 0.8 : 1,
+                  fontWeight: 600,
+                  fontSize: '13px',
                 }}
               >
-                {uploading ? 'Uploading...' : 'Save screenshot'}
+                <SendIcon />
+                {uploading ? 'Uploading…' : 'Save screenshot'}
               </button>
             </div>
           </div>

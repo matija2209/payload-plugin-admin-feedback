@@ -33,7 +33,7 @@
   "scripts": {
     "build": "tsup && node scripts/stamp-client-boundary.mjs",
     "dev": "tsup --watch",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
     "next": "^15.0.0 || ^16.0.0",

@@ -20,7 +20,7 @@ Floating feedback/chat widget plugin for Payload CMS admin and selected Next.js 
 ## Install
 
 ```bash
-pnpm add payload-plugin-admin-feedback
+pnpm add @matija2209/payload-plugin-admin-feedback
 ```
 
 ## Requirements
@@ -40,7 +40,7 @@ pnpm add payload-plugin-admin-feedback
 
 ```ts
 import { buildConfig } from 'payload'
-import { adminFeedbackPlugin } from 'payload-plugin-admin-feedback'
+import { adminFeedbackPlugin } from '@matija2209/payload-plugin-admin-feedback'
 
 export default buildConfig({
   // ...
@@ -97,7 +97,7 @@ If your project stores uploads in a collection named `files` instead of `media`,
 In your Payload admin layout (`src/app/(payload)/layout.tsx`):
 
 ```tsx
-import { AdminFeedbackWidget } from 'payload-plugin-admin-feedback/client'
+import { AdminFeedbackWidget } from '@matija2209/payload-plugin-admin-feedback/client'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -116,7 +116,7 @@ The admin widget automatically sends authenticated requests (HTTP-only cookies v
 In your Next.js frontend locale layout (`src/app/(frontend)/[locale]/layout.tsx`):
 
 ```tsx
-import { FrontendFeedbackWidget } from 'payload-plugin-admin-feedback/client'
+import { FrontendFeedbackWidget } from '@matija2209/payload-plugin-admin-feedback/client'
 
 export default async function LocaleLayout({ children, params }) {
   return (

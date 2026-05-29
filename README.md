@@ -64,12 +64,31 @@ export default buildConfig({
         enabled: true,
         include: ['/marketplace*', '/profile*'],
       },
+      tenant: {
+        enabled: true,
+        collectionSlug: 'tenants',
+        fieldName: 'tenant',
+        formDataSlugKey: 'tenant',
+        pathMarkers: ['pisarna', 'narocilnica'],
+        resolveTenantId: async ({ req, tenantSlug }) => {
+          // Optional host fallback (admin cookie, subdomain, …)
+          return null
+        },
+      },
     }),
   ],
 })
 ```
 
 This registers the `admin-feedback` collection with custom endpoints (`/submit`, `/upload`, `/upload/:id`) — no additional API routes are needed.
+
+### Multi-tenant media uploads
+
+When `tenant.enabled` is true, screenshot uploads set the configured relationship field on `mediaCollectionSlug`. Resolution order:
+
+1. Tenant slug in upload `FormData` (set automatically when `tenantPathMarkers` is passed to `FrontendFeedbackWidget`)
+2. Slug parsed from the request URL via `tenant.pathMarkers`
+3. `tenant.resolveTenantId` callback for host-specific logic
 
 If your project stores uploads in a collection named `files` instead of `media`, set `mediaCollectionSlug: 'files'` exactly as shown above. The plugin validates that the target collection exists and is upload-enabled during startup.
 
@@ -125,6 +144,8 @@ export default async function LocaleLayout({ children, params }) {
 | `title` | `string` | `'Feedback'` | Widget title. |
 | `submitLabel` | `string` | `'Send'` | Submit button label. |
 | `uploadLabel` | `string` | `'Upload image'` | Upload button label. |
+| `tenantPathMarkers` | `string[]` | `[]` | Path markers — tenant slug is the segment before each marker; sent on upload. |
+| `tenantFormDataKey` | `string` | `'tenant'` | FormData key for tenant slug. |
 
 **How locale normalization works:** When `locales` is `['en', 'ru', 'sl']`, the widget strips the first path segment if it matches a locale. For example, `/en/marketplace` becomes `/marketplace` before checking the `include` patterns. This means you write patterns once and they work across all locales.
 
@@ -143,6 +164,7 @@ export default async function LocaleLayout({ children, params }) {
 - `screenshot?: { enabled?: boolean; maxFileSizeBytes?: number; allowedMimeTypes?: string[]; capturePolicy?: 'current-tab-first' | 'strict-current-tab' | 'any-surface' }`
 - `frontend?: { enabled?: boolean; include?: string[] }`
 - `frontendRouteMatcher?: (pathname: string) => boolean` optional custom route matcher for frontend display logic
+- `tenant?: TenantConfig` optional multi-tenant upload scoping (`enabled`, `collectionSlug`, `fieldName`, `formDataSlugKey`, `pathMarkers`, `resolveTenantId`)
 
 ## Screenshot Capture Behavior
 

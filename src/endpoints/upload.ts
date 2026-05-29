@@ -1,8 +1,13 @@
 import type { Endpoint } from 'payload';
 
+import { resolveFeedbackUploadTenantId } from '../tenant/resolveUploadTenant';
+import type { ResolvedAdminFeedbackPluginOptions } from '../types';
 import { corsHeaders } from '../utils';
 
-export const createUploadEndpoint = (mediaCollectionSlug: string): Endpoint => ({
+export const createUploadEndpoint = (
+  mediaCollectionSlug: string,
+  options: ResolvedAdminFeedbackPluginOptions,
+): Endpoint => ({
   path: '/upload',
   method: 'post',
   handler: async (req) => {
@@ -17,7 +22,11 @@ export const createUploadEndpoint = (mediaCollectionSlug: string): Endpoint => (
       const formData = await (req as unknown as Request).formData();
       const file = formData.get('file');
       const altRaw = formData.get('alt');
+      const tenantSlugKey = options.tenant?.formDataSlugKey || 'tenant';
+      const tenantSlugRaw = formData.get(tenantSlugKey);
       const alt = typeof altRaw === 'string' ? altRaw.trim() : '';
+      const tenantSlugFromForm =
+        typeof tenantSlugRaw === 'string' ? tenantSlugRaw.trim() : '';
 
       if (!(file instanceof File)) {
         return Response.json(
@@ -33,11 +42,31 @@ export const createUploadEndpoint = (mediaCollectionSlug: string): Endpoint => (
         );
       }
 
+      const mediaData: Record<string, unknown> = {
+        alt: alt || file.name,
+      };
+
+      if (options.tenant?.enabled) {
+        const tenantId = await resolveFeedbackUploadTenantId(
+          req,
+          options,
+          tenantSlugFromForm || null,
+        );
+
+        if (typeof tenantId !== 'number') {
+          return Response.json(
+            { success: false, error: 'Tenant context required.' },
+            { status: 400, headers: corsHeaders(req) },
+          );
+        }
+
+        mediaData[options.tenant.fieldName || 'tenant'] = tenantId;
+      }
+
       const media = await req.payload.create({
         collection: mediaCollectionSlug as 'media',
-        data: {
-          alt: alt || file.name,
-        },
+        overrideAccess: true,
+        data: mediaData,
         file: {
           data: Buffer.from(await file.arrayBuffer()),
           mimetype: file.type || 'application/octet-stream',

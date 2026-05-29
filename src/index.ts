@@ -98,8 +98,9 @@ export const adminFeedbackPlugin = definePlugin<AdminFeedbackPluginOptions>({
   },
 });
 
-export type { AdminFeedbackPluginOptions } from './types';
+export type { AdminFeedbackPluginOptions, TenantConfig } from './types';
 export { pathMatchesAllowlist } from './client/routeMatcher';
+export { extractTenantSlugFromPathname } from './tenant/extractTenantSlug';
 
 declare module 'payload' {
   interface RegisteredPlugins {

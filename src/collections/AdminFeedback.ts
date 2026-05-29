@@ -30,7 +30,7 @@ export const createAdminFeedbackCollection = (
     },
     endpoints: [
       createSubmitEndpoint(),
-      createUploadEndpoint(mediaCollectionSlug),
+      createUploadEndpoint(mediaCollectionSlug, options),
       createDeleteUploadEndpoint(mediaCollectionSlug),
     ],
     hooks: {

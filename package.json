@@ -1,6 +1,13 @@
 {
   "name": "@matija2209/payload-plugin-admin-feedback",
-  "version": "1.0.0",
+  "version": "1.0.4",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matija2209/payload-plugin-admin-feedback.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "Floating admin feedback widget plugin for Payload CMS.",
   "license": "MIT",
   "type": "module",
@@ -27,8 +34,8 @@
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
-    "payload": "^3.0.0",
-    "react": "^18.0.0 || ^19.0.0"
+    "payload": "^3.84.1",
+    "react": "^19.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",

@@ -1,5 +1,24 @@
 import type { PayloadRequest, Config } from 'payload';
 
+export type TenantResolveArgs = {
+  req: PayloadRequest;
+  tenantSlug: string | null;
+};
+
+export type TenantConfig = {
+  enabled?: boolean;
+  /** Tenants collection slug used to resolve slug → id (default `tenants`). */
+  collectionSlug?: string;
+  /** Relationship field on the upload collection (default `tenant`). */
+  fieldName?: string;
+  /** FormData key for an explicit tenant slug from the client (default `tenant`). */
+  formDataSlugKey?: string;
+  /** URL path segments — tenant slug is the segment immediately before each marker. */
+  pathMarkers?: string[];
+  /** Host-specific fallback when slug lookup is not enough (admin cookie, subdomain, …). */
+  resolveTenantId?: (args: TenantResolveArgs) => Promise<number | null> | number | null;
+};
+
 export type FrontendDisplayConfig = {
   enabled?: boolean;
   include?: string[];
@@ -26,16 +45,18 @@ export type AdminFeedbackPluginOptions = {
   screenshot?: ScreenshotConfig;
   frontend?: FrontendDisplayConfig;
   frontendRouteMatcher?: (pathname: string) => boolean;
+  tenant?: TenantConfig;
 };
 
 export type ResolvedAdminFeedbackPluginOptions = Omit<
   AdminFeedbackPluginOptions,
-  'frontend' | 'screenshot' | 'mediaCollectionSlug' | 'strictMediaCollection'
+  'frontend' | 'screenshot' | 'mediaCollectionSlug' | 'strictMediaCollection' | 'tenant'
 > & {
   frontend: Required<FrontendDisplayConfig>;
   screenshot: Required<ScreenshotConfig>;
   mediaCollectionSlug: string;
   strictMediaCollection: boolean;
+  tenant?: TenantConfig;
 };
 
 export type FeedbackMetaInput = {
